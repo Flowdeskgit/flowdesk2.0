@@ -2,10 +2,18 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
+// Public client — used for all normal operations (respects RLS)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Maps camelCase entity names to snake_case Supabase table names
+// Service-role client — used ONLY by admin for user management (bypasses RLS)
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+
+// ─── Entity name → table name ──────────────────────────────────────────────
+
 const ENTITY_TABLE_MAP = {
   AcaoCorretiva12Semanas: 'acao_corretiva_12_semanas',
   AdministrativoINSS: 'administrativo_inss',
@@ -74,25 +82,20 @@ const ENTITY_TABLE_MAP = {
   TemplateMinuta: 'template_minuta',
 };
 
-// Flattens a Supabase row into a plain object: { id, created_at, ...data }
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
 function flattenRow(row) {
   if (!row) return null;
-  const { id, created_at, updated_at, data } = row;
-  return { id, created_date: created_at, created_at, updated_at, ...data };
+  const { id, created_at, updated_at, user_id, data } = row;
+  return { id, created_date: created_at, created_at, updated_at, user_id, ...data };
 }
 
-// Resolves sort field: '-created_date' → { column: 'created_at', ascending: false }
-//                       'nome'         → { column: 'nome',       ascending: true }
 function resolveSort(sort) {
   if (!sort) return { column: 'created_at', ascending: false, isDataField: false };
   const ascending = !sort.startsWith('-');
   const field = sort.replace(/^-/, '');
-
-  // Map base44 field aliases to actual columns
   if (field === 'created_date') return { column: 'created_at', ascending, isDataField: false };
   if (field === 'updated_date') return { column: 'updated_at', ascending, isDataField: false };
-
-  // All other fields live inside the data JSONB column
   return { column: field, ascending, isDataField: true };
 }
 
@@ -101,53 +104,47 @@ function throwOnError({ data, error }) {
   return data;
 }
 
+async function getCurrentUserId() {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
+// ─── Entity client factory ─────────────────────────────────────────────────
+
 function createEntityClient(entityName) {
   const tableName = ENTITY_TABLE_MAP[entityName];
   if (!tableName) throw new Error(`Unknown entity: ${entityName}`);
 
   return {
-    // list(sort?, limit?) → array of flat objects
     async list(sort = '-created_date', limit = 1000) {
       const { column, ascending, isDataField } = resolveSort(sort);
-
       let query = supabase.from(tableName).select('*');
-
       if (!isDataField) {
         query = query.order(column, { ascending });
       } else {
-        // Sort by JSONB field using computed column expression
         query = query.order('created_at', { ascending: false });
       }
-
       if (limit) query = query.limit(limit);
-
       const rows = throwOnError(await query);
       return (rows || []).map(flattenRow);
     },
 
-    // filter(criteria, sort?, limit?) → array of flat objects matching criteria
     async filter(criteria = {}, sort = '-created_date', limit = 1000) {
       let query = supabase.from(tableName).select('*');
-
-      // Apply each filter criterion using JSONB containment
       if (Object.keys(criteria).length > 0) {
         query = query.contains('data', criteria);
       }
-
       const { column, ascending, isDataField } = resolveSort(sort);
       if (!isDataField) {
         query = query.order(column, { ascending });
       } else {
         query = query.order('created_at', { ascending: false });
       }
-
       if (limit) query = query.limit(limit);
-
       const rows = throwOnError(await query);
       return (rows || []).map(flattenRow);
     },
 
-    // get(id) → single flat object
     async get(id) {
       const row = throwOnError(
         await supabase.from(tableName).select('*').eq('id', id).single()
@@ -155,18 +152,17 @@ function createEntityClient(entityName) {
       return flattenRow(row);
     },
 
-    // create(fields) → created flat object
     async create(fields) {
-      const { id, created_at, created_date, updated_at, ...dataFields } = fields;
+      const user_id = await getCurrentUserId();
+      const { id, created_at, created_date, updated_at, user_id: _uid, ...dataFields } = fields;
       const rows = throwOnError(
-        await supabase.from(tableName).insert({ data: dataFields }).select()
+        await supabase.from(tableName).insert({ data: dataFields, user_id }).select()
       );
       return flattenRow(rows?.[0]);
     },
 
-    // update(id, fields) → updated flat object
     async update(id, fields) {
-      const { id: _id, created_at, created_date, updated_at, ...dataFields } = fields;
+      const { id: _id, created_at, created_date, updated_at, user_id: _uid, ...dataFields } = fields;
       const rows = throwOnError(
         await supabase
           .from(tableName)
@@ -177,61 +173,142 @@ function createEntityClient(entityName) {
       return flattenRow(rows?.[0]);
     },
 
-    // delete(id) → void
     async delete(id) {
       throwOnError(await supabase.from(tableName).delete().eq('id', id));
     },
   };
 }
 
-// Build the entities proxy: base44.entities.Cliente → createEntityClient('Cliente')
-const entitiesProxy = new Proxy(
-  {},
-  {
-    get(_, entityName) {
-      return createEntityClient(entityName);
-    },
-  }
-);
-
-// Stub auth: app runs without authentication (requiresAuth: false)
-const authStub = {
-  async me() {
-    return { id: 'local-user', name: 'Usuário', email: 'user@flowdesk.local' };
+const entitiesProxy = new Proxy({}, {
+  get(_, entityName) {
+    return createEntityClient(entityName);
   },
-  logout() {},
-  redirectToLogin() {},
+});
+
+// ─── Auth ─────────────────────────────────────────────────────────────────
+
+const auth = {
+  async me() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    return profile ? { ...profile, email: user.email } : null;
+  },
+
+  async signIn(email, password) {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async signUp(email, password) {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async logout() {
+    await supabase.auth.signOut();
+  },
+
+  redirectToLogin() {
+    // handled in-app by AuthContext
+  },
+
+  onAuthStateChange(callback) {
+    return supabase.auth.onAuthStateChange(callback);
+  },
 };
 
-// Stub appLogs: silently no-op (was used for base44 usage analytics)
-const appLogsStub = {
+// ─── App logs (no-op) ─────────────────────────────────────────────────────
+
+const appLogs = {
   logUserInApp: () => Promise.resolve(),
 };
 
-// integrations.Core: real file upload via Supabase Storage, no-op email
-const integrationsCoreStub = {
-  async UploadFile({ file }) {
-    const ext = file.name.split('.').pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from('uploads').upload(path, file, {
-      cacheControl: '3600',
-      upsert: false,
-    });
-    if (error) throw new Error(error.message);
-    const { data } = supabase.storage.from('uploads').getPublicUrl(path);
-    return { file_url: data.publicUrl };
-  },
-  async SendEmail(params) {
-    console.warn('SendEmail called but no email provider configured:', params);
-    return { success: false, message: 'Email provider not configured' };
+// ─── Integrations ─────────────────────────────────────────────────────────
+
+const integrations = {
+  Core: {
+    async UploadFile({ file }) {
+      const { data: { user } } = await supabase.auth.getUser();
+      const folder = user?.id ?? 'public';
+      const ext = file.name.split('.').pop();
+      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('uploads').upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+      if (error) throw new Error(error.message);
+      const { data } = supabase.storage.from('uploads').getPublicUrl(path);
+      return { file_url: data.publicUrl };
+    },
+
+    async SendEmail(params) {
+      console.warn('SendEmail: no email provider configured.', params);
+      return { success: false };
+    },
   },
 };
 
+// ─── Profile management (admin only, uses service role) ───────────────────
+
+export const profileManager = {
+  async listProfiles() {
+    const { data, error } = await supabase.from('profiles').select('*').order('created_at');
+    if (error) throw new Error(error.message);
+    return data || [];
+  },
+
+  async createProfile({ full_name, email, password, role = 'user', allowed_tabs = [] }) {
+    // Create auth user via service-role client
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+    if (authError) throw new Error(authError.message);
+
+    const userId = authData.user.id;
+
+    // Insert profile record
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .insert({ id: userId, full_name, email, role, allowed_tabs })
+      .select()
+      .single();
+    if (profileError) throw new Error(profileError.message);
+
+    return profile;
+  },
+
+  async updateProfile(id, updates) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  },
+
+  async deleteProfile(id) {
+    // Delete auth user via service-role (cascade deletes profile)
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+    if (error) throw new Error(error.message);
+  },
+};
+
+// ─── Exported shim ────────────────────────────────────────────────────────
+
 export const base44 = {
   entities: entitiesProxy,
-  auth: authStub,
-  appLogs: appLogsStub,
-  integrations: {
-    Core: integrationsCoreStub,
-  },
+  auth,
+  appLogs,
+  integrations,
 };

@@ -84,6 +84,8 @@ import Financeiro from './pages/Financeiro';
 import ProdutosEducacionais from './pages/ProdutosEducacionais';
 import Marketing from './pages/Marketing';
 import FolhaDePonto from './pages/FolhaDePonto';
+import Perfis from './pages/Perfis';
+import Login from './pages/Login';
 import __Layout from './Layout.jsx';
 
 
@@ -125,6 +127,8 @@ export const PAGES = {
     "ProdutosEducacionais": ProdutosEducacionais,
     "Marketing": Marketing,
     "FolhaDePonto": FolhaDePonto,
+    "Perfis": Perfis,
+    "Login": Login,
 }
 
 export const pagesConfig = {

@@ -1,53 +1,86 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabaseClient';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);         // auth.users row
+  const [profile, setProfile] = useState(null);   // profiles row
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings, setIsLoadingPublicSettings] = useState(false);
+  const [isLoadingPublicSettings] = useState(false);
   const [authError, setAuthError] = useState(null);
-  const [appPublicSettings] = useState({ id: 'flowdesk', public_settings: {} });
 
-  useEffect(() => {
-    loadUser();
-  }, []);
-
-  const loadUser = async () => {
-    try {
-      const currentUser = await base44.auth.me();
-      setUser(currentUser);
-      setIsAuthenticated(true);
-    } catch {
+  // Fetch profile record from DB for a given auth user
+  const fetchProfile = async (authUser) => {
+    if (!authUser) {
+      setProfile(null);
+      setUser(null);
       setIsAuthenticated(false);
-    } finally {
-      setIsLoadingAuth(false);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .single();
+
+    if (error || !data) {
+      setAuthError({ type: 'no_profile', message: 'Perfil não encontrado. Contate o administrador.' });
+      setIsAuthenticated(false);
+    } else {
+      setUser({ ...data, email: authUser.email });
+      setProfile(data);
+      setIsAuthenticated(true);
+      setAuthError(null);
     }
   };
 
-  const logout = () => {
+  useEffect(() => {
+    // Check existing session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      fetchProfile(session?.user ?? null).finally(() => setIsLoadingAuth(false));
+    });
+
+    // Listen for auth state changes (login / logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      fetchProfile(session?.user ?? null).finally(() => setIsLoadingAuth(false));
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
+    setProfile(null);
     setIsAuthenticated(false);
-    base44.auth.logout();
   };
 
   const navigateToLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
+    // Handled by App.jsx routing — just clear state
+    logout();
   };
+
+  const isAdmin = profile?.role === 'admin';
+
+  // allowed_tabs: admin sees everything (null = no restriction), others see their list
+  const allowedTabs = isAdmin ? null : (profile?.allowed_tabs ?? []);
 
   return (
     <AuthContext.Provider value={{
       user,
+      profile,
       isAuthenticated,
       isLoadingAuth,
       isLoadingPublicSettings,
       authError,
-      appPublicSettings,
+      appPublicSettings: null,
+      isAdmin,
+      allowedTabs,
       logout,
       navigateToLogin,
-      checkAppState: loadUser,
+      refetchProfile: () => supabase.auth.getUser().then(({ data: { user: u } }) => fetchProfile(u)),
     }}>
       {children}
     </AuthContext.Provider>
@@ -55,7 +88,7 @@ export const AuthProvider = ({ children }) => {
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within an AuthProvider');
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };
