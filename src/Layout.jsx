@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
+import { useTheme } from '@/lib/ThemeContext';
 import {
   LayoutDashboard,
   Briefcase,
@@ -29,6 +30,8 @@ import {
   BellRing,
   FileText,
   UserCog,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -133,10 +136,14 @@ export default function Layout({ children, currentPageName }) {
     );
   };
 
+  const { modo_exibicao, savePreferences } = useTheme() || {};
+  const isDark = modo_exibicao === 'escuro';
+  const toggleDark = () => savePreferences?.(undefined, isDark ? 'claro' : 'escuro');
+
   const UserMenu = ({ side = 'top', onItemClick }) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-start text-foreground hover:bg-rose-50 border-border gap-2">
+        <Button variant="outline" className="w-full justify-start text-foreground hover:bg-rose-50 dark:hover:bg-rose-950/30 border-border gap-2">
           <UserAvatar user={user} size="sm" />
           <span className="flex-1 text-left truncate">{user?.full_name?.split(' ')[0] || 'Usuário'}</span>
           <MoreHorizontal className="h-4 w-4 flex-shrink-0" />
@@ -172,6 +179,13 @@ export default function Layout({ children, currentPageName }) {
           <Link to={createPageUrl('Configuracoes')} onClick={onItemClick}>
             <Settings className="mr-2 h-4 w-4" />Configurações
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={toggleDark}>
+          {isDark
+            ? <><Sun  className="mr-2 h-4 w-4 text-amber-500" />Modo Claro</>
+            : <><Moon className="mr-2 h-4 w-4 text-indigo-400" />Modo Escuro</>
+          }
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout} className="text-red-600">

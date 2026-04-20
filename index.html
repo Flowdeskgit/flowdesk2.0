@@ -1,11 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="https://base44.com/logo_v2.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="/manifest.json" />
-    <title>Base44 APP</title>
+    <title>MCR Advocacia</title>
+    <!--
+      Apply dark class BEFORE any CSS or React loads to prevent flash of wrong theme.
+      Reads from localStorage synchronously — zero layout shift.
+    -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('flowdesk-theme-mode') || 'claro';
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = mode === 'escuro' || (mode === 'automatico' && systemDark);
+          if (isDark) document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
