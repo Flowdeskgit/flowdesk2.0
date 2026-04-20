@@ -3,7 +3,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ThemeProvider } from '@/lib/ThemeContext';
@@ -14,12 +14,17 @@ const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
-const LayoutWrapper = ({ children, currentPageName }) => Layout
-  ? <Layout currentPageName={currentPageName}>{children}</Layout>
-  : <>{children}</>;
+// Derive the current page name from the URL so Layout can highlight the active nav item
+function useCurrentPageName() {
+  const { pathname } = useLocation();
+  if (pathname === '/') return mainPageKey;
+  // Strip leading slash: "/Clientes" → "Clientes"
+  return pathname.slice(1);
+}
 
 const AppRoutes = () => {
   const { isLoadingAuth, isAuthenticated, authError } = useAuth();
+  const currentPageName = useCurrentPageName();
 
   if (isLoadingAuth) {
     return (
@@ -50,27 +55,21 @@ const AppRoutes = () => {
     );
   }
 
-  return (
+  // Layout is rendered ONCE here and persists across navigation.
+  // Only the inner <Routes> content swaps — sidebar scroll position is preserved.
+  const content = (
     <Routes>
-      <Route path="/" element={
-        <LayoutWrapper currentPageName={mainPageKey}>
-          <MainPage />
-        </LayoutWrapper>
-      } />
+      <Route path="/" element={<MainPage />} />
       {Object.entries(Pages).map(([path, Page]) => (
-        <Route
-          key={path}
-          path={`/${path}`}
-          element={
-            <LayoutWrapper currentPageName={path}>
-              <Page />
-            </LayoutWrapper>
-          }
-        />
+        <Route key={path} path={`/${path}`} element={<Page />} />
       ))}
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
+
+  return Layout
+    ? <Layout currentPageName={currentPageName}>{content}</Layout>
+    : content;
 };
 
 function App() {
