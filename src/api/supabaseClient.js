@@ -259,13 +259,14 @@ const integrations = {
 
 export const profileManager = {
   async listProfiles() {
-    const { data, error } = await supabase.from('profiles').select('*').order('created_at');
+    // Use service-role client so password_display is readable without RLS interference
+    const { data, error } = await supabaseAdmin.from('profiles').select('*').order('created_at');
     if (error) throw new Error(error.message);
     return data || [];
   },
 
   async createProfile({ full_name, email, password, role = 'user', allowed_tabs = [] }) {
-    // Create auth user via service-role client
+    // Create auth user via service-role client (auto-confirms email, bypasses RLS)
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -275,10 +276,10 @@ export const profileManager = {
 
     const userId = authData.user.id;
 
-    // Insert profile record
+    // Insert profile record — store password_display so admin can see it later
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .insert({ id: userId, full_name, email, role, allowed_tabs })
+      .insert({ id: userId, full_name, email, role, allowed_tabs, password_display: password })
       .select()
       .single();
     if (profileError) throw new Error(profileError.message);
@@ -287,7 +288,7 @@ export const profileManager = {
   },
 
   async updateProfile(id, updates) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('profiles')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id)
@@ -297,8 +298,23 @@ export const profileManager = {
     return data;
   },
 
+  async updatePassword(id, newPassword) {
+    // Update the auth password via service-role
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(id, {
+      password: newPassword,
+    });
+    if (authError) throw new Error(authError.message);
+
+    // Keep password_display in sync
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .update({ password_display: newPassword, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (profileError) throw new Error(profileError.message);
+  },
+
   async deleteProfile(id) {
-    // Delete auth user via service-role (cascade deletes profile)
+    // Delete auth user via service-role (cascades to profile row)
     const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
     if (error) throw new Error(error.message);
   },
