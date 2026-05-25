@@ -1,0 +1,53 @@
+{
+  "name": "ExigenciaAdmINSS",
+  "type": "object",
+  "properties": {
+    "administrativo_inss_id": {
+      "type": "string"
+    },
+    "data_emissao_exigencia": {
+      "type": "string",
+      "format": "date"
+    },
+    "prazo_final": {
+      "type": "string",
+      "format": "date"
+    },
+    "descricao_exigencia": {
+      "type": "string"
+    },
+    "documentos_solicitados": {
+      "type": "string"
+    },
+    "status_exigencia": {
+      "type": "string",
+      "enum": [
+        "Pendente",
+        "Aguardando cliente",
+        "Em andamento",
+        "Cumprida",
+        "Enviada",
+        "Vencida",
+        "Cancelada"
+      ],
+      "default": "Pendente"
+    },
+    "data_cumprimento": {
+      "type": "string",
+      "format": "date"
+    },
+    "forma_cumprimento": {
+      "type": "string"
+    },
+    "responsavel_interno": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "administrativo_inss_id",
+    "descricao_exigencia"
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "name": "TarefaINSS",
+  "type": "object",
+  "properties": {
+    "processo_id": {
+      "type": "string"
+    },
+    "central_id": {
+      "type": "string"
+    },
+    "titulo_tarefa": {
+      "type": "string"
+    },
+    "descricao_tarefa": {
+      "type": "string"
+    },
+    "categoria_tarefa": {
+      "type": "string",
+      "enum": [
+        "Agendamento",
+        "Protocolo",
+        "Exig\u00eancia",
+        "An\u00e1lise documental",
+        "Recurso",
+        "Contato com cliente",
+        "Acesso Meu INSS",
+        "Confer\u00eancia",
+        "Outro"
+      ]
+    },
+    "status_tarefa": {
+      "type": "string",
+      "enum": [
+        "A fazer",
+        "Em andamento",
+        "Aguardando cliente",
+        "Aguardando INSS",
+        "Conclu\u00edda",
+        "Cancelada"
+      ],
+      "default": "A fazer"
+    },
+    "prioridade": {
+      "type": "string",
+      "enum": [
+        "Baixa",
+        "M\u00e9dia",
+        "Alta",
+        "Urgente"
+      ],
+      "default": "M\u00e9dia"
+    },
+    "prazo": {
+      "type": "string",
+      "format": "date"
+    },
+    "responsavel": {
+      "type": "string"
+    },
+    "vinculada_a_aba": {
+      "type": "string",
+      "enum": [
+        "Vis\u00e3o geral",
+        "Agendamentos",
+        "Protocolos",
+        "Exig\u00eancias",
+        "Deferidos",
+        "Indeferidos",
+        "Conclu\u00eddos",
+        "Credenciais"
+      ]
+    },
+    "item_relacionado_id": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "criado_por": {
+      "type": "string"
+    },
+    "atualizado_por": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "processo_id",
+    "titulo_tarefa",
+    "status_tarefa"
+  ]
+}

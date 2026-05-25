@@ -1,8 +1,6 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { motion } from 'framer-motion';
-import { format, subDays, parseISO, isAfter } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 export default function AtendimentosChart({ atendimentos }) {
   // Agrupar atendimentos por status

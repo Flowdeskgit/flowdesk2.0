@@ -1,0 +1,137 @@
+{
+  "name": "Tarefa",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo da tarefa"
+    },
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o detalhada"
+    },
+    "origem": {
+      "type": "string",
+      "enum": [
+        "Manual",
+        "Atendimento",
+        "Sistema",
+        "Encaminhamento"
+      ],
+      "default": "Manual",
+      "description": "Origem da cria\u00e7\u00e3o da tarefa"
+    },
+    "atendimento_id": {
+      "type": "string",
+      "description": "ID do atendimento relacionado"
+    },
+    "cliente_id": {
+      "type": "string",
+      "description": "ID do cliente vinculado"
+    },
+    "cliente_nome": {
+      "type": "string",
+      "description": "Nome do cliente (cache para exibi\u00e7\u00e3o r\u00e1pida)"
+    },
+    "responsavel_id": {
+      "type": "string",
+      "description": "ID da pessoa respons\u00e1vel"
+    },
+    "data_inicio": {
+      "type": "string",
+      "format": "date"
+    },
+    "data_vencimento": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Em aberto",
+        "Conclu\u00edda",
+        "N\u00e3o realizada / Impedimento"
+      ],
+      "default": "Em aberto"
+    },
+    "status_detalhado": {
+      "type": "string",
+      "enum": [
+        "Urgente",
+        "Pendente",
+        "Em andamento",
+        "Atrasada",
+        "Conclu\u00edda"
+      ],
+      "default": "Pendente"
+    },
+    "estado_execucao": {
+      "type": "string",
+      "enum": [
+        "Em dia",
+        "Vence hoje",
+        "Atrasado"
+      ],
+      "description": "Calculado automaticamente baseado na data de vencimento"
+    },
+    "prioridade": {
+      "type": "string",
+      "enum": [
+        "Baixa",
+        "M\u00e9dia",
+        "Alta"
+      ],
+      "default": "M\u00e9dia"
+    },
+    "anexos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs dos documentos e imagens anexados"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "retorno_executivo": {
+      "type": "string",
+      "description": "Retorno executivo - obrigat\u00f3rio para conclus\u00e3o da tarefa"
+    },
+    "transferido_para": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio para quem a tarefa foi transferida"
+    },
+    "mencoes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs dos usu\u00e1rios mencionados"
+    },
+    "tarefa_origem_id": {
+      "type": "string",
+      "description": "ID da tarefa original da qual esta foi encaminhada"
+    },
+    "tarefa_origem_titulo": {
+      "type": "string",
+      "description": "T\u00edtulo da tarefa de origem (cache)"
+    },
+    "tarefas_encaminhadas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs das tarefas encaminhadas a partir desta"
+    },
+    "setor_destino": {
+      "type": "string",
+      "description": "Setor de destino do encaminhamento"
+    }
+  },
+  "required": [
+    "titulo",
+    "responsavel_id",
+    "data_vencimento",
+    "status"
+  ]
+}

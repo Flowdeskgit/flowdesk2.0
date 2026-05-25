@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { profileManager } from '@/api/supabaseClient';
+import { profileManager } from '@/api/flowdeskClient';
 import { useAuth } from '@/lib/AuthContext';
+import { DEFAULT_ALLOWED_TABS, PROFILE_TAB_ITEMS } from '@/lib/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,45 +19,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Loader2, Plus, Trash2, Settings2, ShieldCheck, User,
-  Eye, EyeOff, KeyRound, Mail, Lock,
+  Eye, EyeOff, KeyRound, Mail,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const ALL_TABS = [
-  { page: 'Dashboard',              label: 'Dashboard' },
-  { page: 'Atendimentos',           label: 'Atendimentos' },
-  { page: 'Tarefas',                label: 'Tarefas' },
-  { page: 'AdministrativoINSS',     label: 'Administrativo INSS' },
-  { page: 'Agenda',                 label: 'Agenda' },
-  { page: 'AguardandoDocumentos',   label: 'Aguardando Documentos' },
-  { page: 'Clientes',               label: 'Clientes' },
-  { page: 'ComercialDashboard',     label: 'Comercial' },
-  { page: 'ControleExecucao',       label: 'Controle de Execução' },
-  { page: 'Financeiro',             label: 'Financeiro' },
-  { page: 'GeradorDocumentos',      label: 'Gerador de Documentos' },
-  { page: 'ProdutosEducacionais',   label: 'Livro, Mentoria & Clube' },
-  { page: 'ManualEscritorio',       label: 'Manual do Escritório' },
-  { page: 'Marketing',              label: 'Marketing' },
-  { page: 'MetodologiaRESULT',      label: 'Metodologia RESULT' },
-  { page: 'MonitoramentoProcessual',label: 'Monitoramento Processual' },
-  { page: 'PainelAcaoCEO',          label: 'Painel de Ação da CEO' },
-  { page: 'Pessoas',                label: 'Pessoas' },
-  { page: 'Processos',              label: 'Processos' },
-  { page: 'Produtividade',          label: 'Produtividade' },
-  { page: 'RetornoCliente',         label: 'Retorno ao Cliente' },
-  { page: 'Setores',                label: 'Setores' },
-  { page: 'FolhaDePonto',           label: 'Folha de Ponto' },
-  { page: 'Historico',              label: 'Histórico' },
-];
-
-const DEFAULT_TABS = [
-  'Dashboard', 'Atendimentos', 'Tarefas', 'AdministrativoINSS', 'Agenda',
-  'AguardandoDocumentos', 'Clientes', 'ControleExecucao', 'Financeiro',
-  'Marketing', 'MonitoramentoProcessual', 'Pessoas', 'Processos',
-  'RetornoCliente', 'Setores',
-];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -64,27 +29,12 @@ function initials(name) {
   return (name || 'U').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 }
 
-// ─── Credential Row ───────────────────────────────────────────────────────────
-// Shows email + password with show/hide toggle — visible only to admin
-function CredentialRow({ icon: Icon, label, value, isPassword }) {
-  const [show, setShow] = useState(false);
-  const display = isPassword ? (show ? value : '••••••••') : value;
-
+function InfoRow({ icon: Icon, label, value }) {
   return (
     <div className="flex items-center gap-2 text-sm text-slate-600 min-w-0">
       <Icon className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
       <span className="text-slate-400 flex-shrink-0">{label}:</span>
-      <span className="font-mono truncate">{display || '—'}</span>
-      {isPassword && value && (
-        <button
-          type="button"
-          onClick={() => setShow(s => !s)}
-          className="ml-1 text-slate-400 hover:text-slate-600 flex-shrink-0"
-          title={show ? 'Ocultar senha' : 'Mostrar senha'}
-        >
-          {show ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-        </button>
-      )}
+      <span className="font-mono truncate">{value || '—'}</span>
     </div>
   );
 }
@@ -113,22 +63,22 @@ function TabPermissionsModal({ profile, open, onClose }) {
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5 text-rose-600" />
+            <Settings2 className="h-5 w-5 text-brand-electric" />
             Tabs de {profile?.full_name}
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex gap-2 flex-wrap mb-3">
-          <Button variant="outline" size="sm" onClick={() => setSelected(ALL_TABS.map(t => t.page))}>Todas</Button>
-          <Button variant="outline" size="sm" onClick={() => setSelected(DEFAULT_TABS)}>Padrão</Button>
+          <Button variant="outline" size="sm" onClick={() => setSelected(PROFILE_TAB_ITEMS.map(t => t.page))}>Todas</Button>
+          <Button variant="outline" size="sm" onClick={() => setSelected(DEFAULT_ALLOWED_TABS)}>Padrão</Button>
           <Button variant="outline" size="sm" onClick={() => setSelected([])}>Nenhuma</Button>
           <span className="ml-auto text-xs text-slate-500 self-center">
-            {selected.length}/{ALL_TABS.length} selecionadas
+            {selected.length}/{PROFILE_TAB_ITEMS.length} selecionadas
           </span>
         </div>
 
         <div className="grid grid-cols-1 gap-2">
-          {ALL_TABS.map(({ page, label }) => (
+          {PROFILE_TAB_ITEMS.map(({ page, label }) => (
             <label
               key={page}
               className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 cursor-pointer hover:bg-slate-50 transition-colors"
@@ -144,7 +94,7 @@ function TabPermissionsModal({ profile, open, onClose }) {
           <Button
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
-            className="bg-rose-600 hover:bg-rose-700 text-white"
+            className="bg-brand-electric hover:bg-brand-electric/90 text-white"
           >
             {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Salvar
@@ -187,7 +137,7 @@ function ChangePasswordModal({ profile, open, onClose }) {
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-rose-600" />
+            <KeyRound className="h-5 w-5 text-brand-electric" />
             Alterar Senha — {profile?.full_name}
           </DialogTitle>
         </DialogHeader>
@@ -231,7 +181,7 @@ function ChangePasswordModal({ profile, open, onClose }) {
           <Button
             onClick={handleSubmit}
             disabled={mutation.isPending || !password || !confirm}
-            className="bg-rose-600 hover:bg-rose-700 text-white"
+            className="bg-brand-electric hover:bg-brand-electric/90 text-white"
           >
             {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Salvar
@@ -247,7 +197,7 @@ function CreateProfileModal({ open, onClose }) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [form, setForm] = useState({
-    full_name: '', email: '', password: '', role: 'user', allowed_tabs: DEFAULT_TABS,
+    full_name: '', email: '', password: '', role: 'user', allowed_tabs: DEFAULT_ALLOWED_TABS,
   });
   const [showPw, setShowPw] = useState(false);
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
@@ -258,7 +208,7 @@ function CreateProfileModal({ open, onClose }) {
       qc.invalidateQueries({ queryKey: ['profiles'] });
       toast({ title: 'Perfil criado', description: `${profile.full_name} adicionado ao sistema.` });
       onClose();
-      setForm({ full_name: '', email: '', password: '', role: 'user', allowed_tabs: DEFAULT_TABS });
+      setForm({ full_name: '', email: '', password: '', role: 'user', allowed_tabs: DEFAULT_ALLOWED_TABS });
     },
     onError: (err) => toast({ title: 'Erro ao criar perfil', description: err.message, variant: 'destructive' }),
   });
@@ -268,7 +218,7 @@ function CreateProfileModal({ open, onClose }) {
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5 text-rose-600" />
+            <Plus className="h-5 w-5 text-brand-electric" />
             Novo Perfil
           </DialogTitle>
         </DialogHeader>
@@ -306,7 +256,7 @@ function CreateProfileModal({ open, onClose }) {
             <div className="flex gap-3">
               {['user', 'admin'].map(r => (
                 <label key={r} className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="role" value={r} checked={form.role === r} onChange={() => set('role', r)} className="accent-rose-600" />
+                  <input type="radio" name="role" value={r} checked={form.role === r} onChange={() => set('role', r)} className="accent-brand-electric" />
                   <span className="text-sm">{r === 'admin' ? 'Administrador' : 'Usuário'}</span>
                 </label>
               ))}
@@ -322,7 +272,7 @@ function CreateProfileModal({ open, onClose }) {
           <Button
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending || !form.full_name || !form.email || !form.password}
-            className="bg-rose-600 hover:bg-rose-700 text-white"
+            className="bg-brand-electric hover:bg-brand-electric/90 text-white"
           >
             {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
             Criar Perfil
@@ -378,9 +328,9 @@ export default function Perfis() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Perfis de Usuário</h1>
-          <p className="text-slate-500 text-sm mt-1">Gerencie acessos, tabs e credenciais de cada membro.</p>
+          <p className="text-slate-500 text-sm mt-1">Gerencie acessos, abas e senhas de cada membro.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="bg-rose-600 hover:bg-rose-700 text-white gap-2">
+        <Button onClick={() => setCreateOpen(true)} className="bg-brand-electric hover:bg-brand-electric/90 text-white gap-2">
           <Plus className="h-4 w-4" />
           Novo Perfil
         </Button>
@@ -390,7 +340,7 @@ export default function Perfis() {
       <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardContent className="pt-4 pb-4 flex items-center gap-3">
-            <ShieldCheck className="h-8 w-8 text-rose-600" />
+            <ShieldCheck className="h-8 w-8 text-brand-electric" />
             <div>
               <p className="text-2xl font-bold text-slate-800">{admins.length}</p>
               <p className="text-xs text-slate-500">Administradores</p>
@@ -423,7 +373,7 @@ export default function Perfis() {
                 <Avatar className="h-11 w-11 flex-shrink-0 mt-0.5">
                   {p.avatar_url
                     ? <img src={p.avatar_url} alt={p.full_name} className="rounded-full object-cover" />
-                    : <AvatarFallback className="bg-gradient-to-br from-rose-500 to-pink-600 text-white text-sm font-semibold">
+                    : <AvatarFallback className="bg-brand-electric text-white text-sm font-semibold">
                         {initials(p.full_name)}
                       </AvatarFallback>
                   }
@@ -437,16 +387,14 @@ export default function Perfis() {
                       <Badge variant="outline" className="text-xs text-slate-500">Você</Badge>
                     )}
                     <Badge className={p.role === 'admin'
-                      ? 'bg-rose-100 text-rose-700 border-rose-200'
+                    ? 'bg-brand-electric/10 text-brand-steel border-brand-electric/20'
                       : 'bg-blue-50 text-blue-700 border-blue-200'
                     }>
                       {p.role === 'admin' ? 'Admin' : 'Usuário'}
                     </Badge>
                   </div>
 
-                  {/* Credentials — always visible to admin */}
-                  <CredentialRow icon={Mail} label="E-mail" value={p.email} isPassword={false} />
-                  <CredentialRow icon={Lock} label="Senha"  value={p.password_display} isPassword={true} />
+                  <InfoRow icon={Mail} label="E-mail" value={p.email} />
 
                   {p.role !== 'admin' && (
                     <p className="text-xs text-slate-400 pt-0.5">

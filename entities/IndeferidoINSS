@@ -1,0 +1,60 @@
+{
+  "name": "IndeferidoINSS",
+  "type": "object",
+  "properties": {
+    "processo_id": {
+      "type": "string"
+    },
+    "central_id": {
+      "type": "string"
+    },
+    "protocolo_relacionado": {
+      "type": "string"
+    },
+    "data_indeferimento": {
+      "type": "string",
+      "format": "date"
+    },
+    "motivo_indeferimento": {
+      "type": "string"
+    },
+    "fundamento_resumido": {
+      "type": "string"
+    },
+    "possibilidade_de_recurso": {
+      "type": "string",
+      "enum": [
+        "Sim",
+        "N\u00e3o",
+        "Analisar"
+      ]
+    },
+    "prazo_para_recurso": {
+      "type": "string",
+      "format": "date"
+    },
+    "recurso_interposto": {
+      "type": "string",
+      "enum": [
+        "Sim",
+        "N\u00e3o"
+      ]
+    },
+    "data_recurso": {
+      "type": "string",
+      "format": "date"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "criado_por": {
+      "type": "string"
+    },
+    "atualizado_por": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "processo_id"
+  ]
+}

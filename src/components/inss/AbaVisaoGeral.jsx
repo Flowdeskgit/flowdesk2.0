@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,7 +32,7 @@ export default function AbaVisaoGeral({ central, processoId, clienteId, user }) 
   }, [central]);
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.CentralAdminINSS.update(central.id, {
+    mutationFn: (data) => flowdesk.entities.CentralAdminINSS.update(central.id, {
       ...data,
       atualizado_por: user?.email || '',
     }),

@@ -1,0 +1,91 @@
+{
+  "name": "Indicador12Semanas",
+  "type": "object",
+  "properties": {
+    "ciclo_id": {
+      "type": "string",
+      "description": "ID do ciclo de 12 semanas"
+    },
+    "nome": {
+      "type": "string",
+      "description": "Nome do indicador"
+    },
+    "setor": {
+      "type": "string",
+      "enum": [
+        "Atendimento",
+        "Administrativo",
+        "Marketing",
+        "Financeiro",
+        "Operacional",
+        "CEO/Estrat\u00e9gico"
+      ],
+      "description": "Setor respons\u00e1vel"
+    },
+    "responsavel_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio respons\u00e1vel"
+    },
+    "meta_definida": {
+      "type": "number",
+      "description": "Meta num\u00e9rica definida"
+    },
+    "unidade_medida": {
+      "type": "string",
+      "enum": [
+        "Tempo",
+        "Percentual",
+        "Quantidade",
+        "Valor"
+      ],
+      "default": "Quantidade",
+      "description": "Unidade de medida do indicador"
+    },
+    "resultado_atual": {
+      "type": "number",
+      "default": 0,
+      "description": "Resultado atual do indicador"
+    },
+    "percentual_atingimento": {
+      "type": "number",
+      "default": 0,
+      "description": "Percentual de atingimento da meta"
+    },
+    "status_indicador": {
+      "type": "string",
+      "enum": [
+        "Dentro da meta",
+        "Em aten\u00e7\u00e3o",
+        "Fora da meta"
+      ],
+      "default": "Em aten\u00e7\u00e3o",
+      "description": "Status do indicador"
+    },
+    "cor_manual": {
+      "type": "string",
+      "description": "Cor manual definida pelo gestor (sobrep\u00f5e autom\u00e1tica)"
+    },
+    "progresso_semanal": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      },
+      "description": "Array com dados de cada uma das 12 semanas"
+    },
+    "calculo_automatico": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o indicador \u00e9 calculado automaticamente dos dados do sistema"
+    },
+    "fonte_dados": {
+      "type": "string",
+      "description": "Qual m\u00f3dulo alimenta automaticamente (Atendimento, Tarefa, etc)"
+    }
+  },
+  "required": [
+    "ciclo_id",
+    "nome",
+    "setor",
+    "meta_definida"
+  ]
+}

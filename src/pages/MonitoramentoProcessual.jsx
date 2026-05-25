@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -15,7 +15,6 @@ import {
   Calendar,
   User,
   AlertTriangle,
-  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,12 +90,12 @@ export default function MonitoramentoProcessual() {
 
   const { data: registros = [], isLoading } = useQuery({
     queryKey: ['monitoramento-processual'],
-    queryFn: () => base44.entities.MonitoramentoProcessual.list('-created_date'),
+    queryFn: () => flowdesk.entities.MonitoramentoProcessual.list('-created_date'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const getPessoaNome = (id) => pessoas.find((p) => p.id === id)?.nome || '-';
@@ -130,11 +129,11 @@ export default function MonitoramentoProcessual() {
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      const registro = await base44.entities.MonitoramentoProcessual.create({
+      const registro = await flowdesk.entities.MonitoramentoProcessual.create({
         ...data,
         status: 'Em Monitoramento',
       });
-      await base44.entities.Auditoria.create({
+      await flowdesk.entities.Auditoria.create({
         modulo: 'Processo Judicial',
         tipo_acao: 'Criação',
         registro_id: registro.id,
@@ -151,8 +150,8 @@ export default function MonitoramentoProcessual() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const registro = await base44.entities.MonitoramentoProcessual.update(id, data);
-      await base44.entities.Auditoria.create({
+      const registro = await flowdesk.entities.MonitoramentoProcessual.update(id, data);
+      await flowdesk.entities.Auditoria.create({
         modulo: 'Processo Judicial',
         tipo_acao: 'Edição',
         registro_id: registro.id,
@@ -169,10 +168,10 @@ export default function MonitoramentoProcessual() {
 
   const concludeMutation = useMutation({
     mutationFn: async (item) => {
-      const registro = await base44.entities.MonitoramentoProcessual.update(item.id, {
+      const registro = await flowdesk.entities.MonitoramentoProcessual.update(item.id, {
         status: 'Concluído',
       });
-      await base44.entities.Auditoria.create({
+      await flowdesk.entities.Auditoria.create({
         modulo: 'Processo Judicial',
         tipo_acao: 'Conclusão',
         registro_id: registro.id,
@@ -187,7 +186,7 @@ export default function MonitoramentoProcessual() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.MonitoramentoProcessual.delete(id),
+    mutationFn: (id) => flowdesk.entities.MonitoramentoProcessual.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['monitoramento-processual'] });
     },

@@ -1,0 +1,64 @@
+{
+  "name": "DeferidoINSS",
+  "type": "object",
+  "properties": {
+    "processo_id": {
+      "type": "string"
+    },
+    "central_id": {
+      "type": "string"
+    },
+    "protocolo_relacionado": {
+      "type": "string"
+    },
+    "tipo_beneficio_deferido": {
+      "type": "string"
+    },
+    "numero_beneficio": {
+      "type": "string"
+    },
+    "data_deferimento": {
+      "type": "string",
+      "format": "date"
+    },
+    "data_inicio_beneficio": {
+      "type": "string",
+      "format": "date"
+    },
+    "renda_mensal_inicial": {
+      "type": "number"
+    },
+    "valor_concedido": {
+      "type": "number"
+    },
+    "observacoes_deferimento": {
+      "type": "string"
+    },
+    "necessita_revisao_posterior": {
+      "type": "string",
+      "enum": [
+        "Sim",
+        "N\u00e3o"
+      ]
+    },
+    "status_pos_deferimento": {
+      "type": "string",
+      "enum": [
+        "Ativo",
+        "Implantado",
+        "Pendente de confer\u00eancia",
+        "Encerrado"
+      ],
+      "default": "Ativo"
+    },
+    "criado_por": {
+      "type": "string"
+    },
+    "atualizado_por": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "processo_id"
+  ]
+}

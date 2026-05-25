@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Plus,
@@ -72,21 +72,21 @@ export default function Historico() {
 
   const { data: historicos = [], isLoading } = useQuery({
     queryKey: ['historicos'],
-    queryFn: () => base44.entities.HistoricoAtendimento.list('-created_date'),
+    queryFn: () => flowdesk.entities.HistoricoAtendimento.list('-created_date'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const { data: atendimentos = [] } = useQuery({
     queryKey: ['atendimentos'],
-    queryFn: () => base44.entities.Atendimento.list(),
+    queryFn: () => flowdesk.entities.Atendimento.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.HistoricoAtendimento.create({
+    mutationFn: (data) => flowdesk.entities.HistoricoAtendimento.create({
       ...data,
       data_hora: new Date().toISOString(),
     }),
@@ -97,7 +97,7 @@ export default function Historico() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.HistoricoAtendimento.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.HistoricoAtendimento.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['historicos'] });
       closeDialog();
@@ -105,7 +105,7 @@ export default function Historico() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.HistoricoAtendimento.delete(id),
+    mutationFn: (id) => flowdesk.entities.HistoricoAtendimento.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['historicos'] });
     },

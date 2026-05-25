@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -39,22 +39,22 @@ export default function AbaAgendamentosAdm({ admId, user }) {
 
   const { data: agendamentos = [] } = useQuery({
     queryKey: ['agend-adm-inss', admId],
-    queryFn: () => base44.entities.AgendamentoAdmINSS.filter({ administrativo_inss_id: admId }),
+    queryFn: () => flowdesk.entities.AgendamentoAdmINSS.filter({ administrativo_inss_id: admId }),
     enabled: !!admId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.AgendamentoAdmINSS.create({ ...data, administrativo_inss_id: admId }),
+    mutationFn: (data) => flowdesk.entities.AgendamentoAdmINSS.create({ ...data, administrativo_inss_id: admId }),
     onSuccess: () => { queryClient.invalidateQueries(['agend-adm-inss', admId]); setShowForm(false); setForm(EMPTY); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.AgendamentoAdmINSS.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.AgendamentoAdmINSS.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries(['agend-adm-inss', admId]); setEditing(null); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.AgendamentoAdmINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.AgendamentoAdmINSS.delete(id),
     onSuccess: () => queryClient.invalidateQueries(['agend-adm-inss', admId]),
   });
 

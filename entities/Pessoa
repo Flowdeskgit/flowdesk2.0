@@ -1,0 +1,42 @@
+{
+  "name": "Pessoa",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome completo"
+    },
+    "foto": {
+      "type": "string",
+      "description": "URL da foto de perfil"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "telefone": {
+      "type": "string"
+    },
+    "cargo": {
+      "type": "string",
+      "enum": [
+        "Advogado",
+        "Assistente",
+        "Gestor",
+        "Assistente Jur\u00eddico",
+        "Financeiro",
+        "Estagi\u00e1rio",
+        "Administrativo"
+      ],
+      "default": "Advogado"
+    },
+    "setor_id": {
+      "type": "string",
+      "description": "ID do setor ao qual pertence"
+    }
+  },
+  "required": [
+    "nome",
+    "cargo"
+  ]
+}

@@ -1,52 +1,46 @@
-import { Toaster } from "@/components/ui/toaster"
-import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClientInstance } from '@/lib/query-client'
-import NavigationTracker from '@/lib/NavigationTracker'
-import { pagesConfig } from './pages.config'
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
-import PageNotFound from './lib/PageNotFound';
+import { Toaster } from '@/components/ui/toaster';
+import NavigationTracker from '@/lib/NavigationTracker';
+import PageNotFound from '@/lib/PageNotFound';
+import { queryClientInstance } from '@/lib/query-client';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { ThemeProvider } from '@/lib/ThemeContext';
 import Login from '@/pages/Login';
-import { supabase } from '@/api/supabaseClient';
+import { pagesConfig } from './pages.config';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
-const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+const MainPage = mainPageKey ? Pages[mainPageKey] : () => null;
 
-// Derive the current page name from the URL so Layout can highlight the active nav item
 function useCurrentPageName() {
   const { pathname } = useLocation();
   if (pathname === '/') return mainPageKey;
-  // Strip leading slash: "/Clientes" → "Clientes"
   return pathname.slice(1);
 }
 
 const AppRoutes = () => {
-  const { isLoadingAuth, isAuthenticated, authError } = useAuth();
+  const { isLoadingAuth, isAuthenticated, authError, logout } = useAuth();
   const currentPageName = useCurrentPageName();
 
   if (isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-rose-600 rounded-full animate-spin" />
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-brand-electric" />
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <Login />;
-  }
-
   if (authError?.type === 'no_profile') {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
-        <div className="max-w-md text-center space-y-4">
-          <h2 className="text-xl font-semibold text-slate-800">Perfil não encontrado</h2>
-          <p className="text-slate-600">{authError.message}</p>
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-md space-y-4 text-center">
+          <h2 className="text-xl font-semibold text-foreground">Perfil não encontrado</h2>
+          <p className="text-muted-foreground">{authError.message}</p>
           <button
-            onClick={() => supabase.auth.signOut()}
-            className="text-rose-600 underline text-sm"
+            type="button"
+            onClick={logout}
+            className="text-sm font-medium text-brand-electric underline underline-offset-4"
           >
             Sair e tentar novamente
           </button>
@@ -55,8 +49,10 @@ const AppRoutes = () => {
     );
   }
 
-  // Layout is rendered ONCE here and persists across navigation.
-  // Only the inner <Routes> content swaps — sidebar scroll position is preserved.
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
   const content = (
     <Routes>
       <Route path="/" element={<MainPage />} />

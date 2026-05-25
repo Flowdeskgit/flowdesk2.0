@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useTheme } from '@/lib/ThemeContext';
 import { Sun, Moon, Monitor, Palette, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const MODOS = [

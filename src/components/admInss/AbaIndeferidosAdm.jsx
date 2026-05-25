@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,22 +19,22 @@ export default function AbaIndeferidosAdm({ admId }) {
 
   const { data: indeferidos = [] } = useQuery({
     queryKey: ['ind-adm-inss', admId],
-    queryFn: () => base44.entities.IndeferidoAdmINSS.filter({ administrativo_inss_id: admId }),
+    queryFn: () => flowdesk.entities.IndeferidoAdmINSS.filter({ administrativo_inss_id: admId }),
     enabled: !!admId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.IndeferidoAdmINSS.create({ ...data, administrativo_inss_id: admId }),
+    mutationFn: (data) => flowdesk.entities.IndeferidoAdmINSS.create({ ...data, administrativo_inss_id: admId }),
     onSuccess: () => { queryClient.invalidateQueries(['ind-adm-inss', admId]); setShowForm(false); setForm(EMPTY); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.IndeferidoAdmINSS.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.IndeferidoAdmINSS.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries(['ind-adm-inss', admId]); setEditing(null); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.IndeferidoAdmINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.IndeferidoAdmINSS.delete(id),
     onSuccess: () => queryClient.invalidateQueries(['ind-adm-inss', admId]),
   });
 

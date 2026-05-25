@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { useQuery } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Search, User, Download, FileText, Loader2, CheckCircle2, Link as LinkIcon } from 'lucide-react';
+import { Search, User, Download, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 
 function normalizeText(v) {
   return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
@@ -27,13 +26,13 @@ export default function UsarModeloDialog({ open, onClose, modelo, user, onDocume
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes-usar-modelo'],
-    queryFn: () => base44.entities.Cliente.list('-created_date', 500),
+    queryFn: () => flowdesk.entities.Cliente.list('-created_date', 500),
     enabled: open,
   });
 
   const { data: processos = [] } = useQuery({
     queryKey: ['processos-usar-modelo'],
-    queryFn: () => base44.entities.Processo.list('-created_date', 500),
+    queryFn: () => flowdesk.entities.Processo.list('-created_date', 500),
     enabled: open,
   });
 
@@ -95,7 +94,7 @@ export default function UsarModeloDialog({ open, onClose, modelo, user, onDocume
       gerado_em: new Date().toISOString(),
     };
 
-    const registro = await base44.entities.DocumentoGerado.create({
+    const registro = await flowdesk.entities.DocumentoGerado.create({
       modelo_id: modelo.id,
       nome_modelo: modelo.nome,
       titulo: tituloDoc,
@@ -111,7 +110,7 @@ export default function UsarModeloDialog({ open, onClose, modelo, user, onDocume
     });
 
     // Incrementar contador de usos
-    await base44.entities.ModeloDocumento.update(modelo.id, {
+    await flowdesk.entities.ModeloDocumento.update(modelo.id, {
       total_usos: (modelo.total_usos || 0) + 1,
     });
 

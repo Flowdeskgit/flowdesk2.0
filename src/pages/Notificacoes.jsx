@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -30,11 +30,11 @@ export default function Notificacoes() {
 
   const { data: notificacoes = [], isLoading } = useQuery({
     queryKey: ['notificacoes'],
-    queryFn: () => base44.entities.Notificacao.list('-created_date', 100),
+    queryFn: () => flowdesk.entities.Notificacao.list('-created_date', 100),
   });
 
   const marcarComoLida = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Notificacao.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.Notificacao.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notificacoes'] });
       queryClient.invalidateQueries({ queryKey: ['notificacoes-nao-lidas'] });
@@ -42,7 +42,7 @@ export default function Notificacoes() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Notificacao.delete(id),
+    mutationFn: (id) => flowdesk.entities.Notificacao.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notificacoes'] });
       queryClient.invalidateQueries({ queryKey: ['notificacoes-nao-lidas'] });

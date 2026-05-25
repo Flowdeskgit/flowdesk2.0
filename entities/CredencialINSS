@@ -1,0 +1,61 @@
+{
+  "name": "CredencialINSS",
+  "type": "object",
+  "properties": {
+    "processo_id": {
+      "type": "string"
+    },
+    "central_id": {
+      "type": "string"
+    },
+    "login_meu_inss": {
+      "type": "string"
+    },
+    "senha_meu_inss": {
+      "type": "string"
+    },
+    "login_gov": {
+      "type": "string"
+    },
+    "senha_gov": {
+      "type": "string"
+    },
+    "observacoes_acesso": {
+      "type": "string"
+    },
+    "autenticacao_dois_fatores": {
+      "type": "string",
+      "enum": [
+        "Sim",
+        "N\u00e3o"
+      ]
+    },
+    "telefone_cadastrado_gov": {
+      "type": "string"
+    },
+    "email_cadastrado_gov": {
+      "type": "string"
+    },
+    "ultimo_teste_acesso": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "acesso_funcionando": {
+      "type": "string",
+      "enum": [
+        "Sim",
+        "N\u00e3o",
+        "Parcial"
+      ]
+    },
+    "criado_por": {
+      "type": "string"
+    },
+    "atualizado_por": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "processo_id"
+  ]
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,11 +13,11 @@ export default function NotificacoesCard() {
 
   const { data: notificacoes = [], isLoading } = useQuery({
     queryKey: ['notificacoes-todas'],
-    queryFn: () => base44.entities.Notificacao.list('-created_date', 50),
+    queryFn: () => flowdesk.entities.Notificacao.list('-created_date', 50),
   });
 
   const marcarLidaMutation = useMutation({
-    mutationFn: (id) => base44.entities.Notificacao.update(id, { lida: true }),
+    mutationFn: (id) => flowdesk.entities.Notificacao.update(id, { lida: true }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notificacoes-todas'] });
       queryClient.invalidateQueries({ queryKey: ['notificacoes-nao-lidas'] });
@@ -25,7 +25,7 @@ export default function NotificacoesCard() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Notificacao.delete(id),
+    mutationFn: (id) => flowdesk.entities.Notificacao.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notificacoes-todas'] });
       queryClient.invalidateQueries({ queryKey: ['notificacoes-nao-lidas'] });
@@ -34,7 +34,7 @@ export default function NotificacoesCard() {
 
   const marcarTodasLidas = async () => {
     const naoLidas = notificacoes.filter(n => !n.lida);
-    await Promise.all(naoLidas.map(n => base44.entities.Notificacao.update(n.id, { lida: true })));
+    await Promise.all(naoLidas.map(n => flowdesk.entities.Notificacao.update(n.id, { lida: true })));
     queryClient.invalidateQueries({ queryKey: ['notificacoes-todas'] });
     queryClient.invalidateQueries({ queryKey: ['notificacoes-nao-lidas'] });
   };

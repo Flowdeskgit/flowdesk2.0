@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Briefcase, Calendar, DollarSign, User } from 'lucide-react';
+import { Calendar, DollarSign, User } from 'lucide-react';
 
 const statusColors = {
   'Aberto': 'bg-blue-100 text-blue-700 border-blue-200',

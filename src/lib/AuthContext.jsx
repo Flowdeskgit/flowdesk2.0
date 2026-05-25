@@ -1,74 +1,84 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { supabase } from '@/api/supabaseClient';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { flowdesk, supabase } from '@/api/flowdeskClient';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);         // auth.users row
-  const [profile, setProfile] = useState(null);   // profiles row
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingPublicSettings] = useState(false);
   const [authError, setAuthError] = useState(null);
+  const [isLoadingPublicSettings] = useState(false);
 
-  // Fetch profile record from DB for a given auth user
   const fetchProfile = async (authUser) => {
     if (!authUser) {
-      setProfile(null);
       setUser(null);
+      setProfile(null);
       setIsAuthenticated(false);
-      return;
+      setAuthError(null);
+      return null;
     }
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', authUser.id)
-      .single();
 
-    if (error || !data) {
-      setAuthError({ type: 'no_profile', message: 'Perfil não encontrado. Contate o administrador.' });
-      setIsAuthenticated(false);
-    } else {
-      setUser({ ...data, email: authUser.email });
-      setProfile(data);
+    try {
+      const currentProfile = await flowdesk.auth.me();
+      setUser(currentProfile);
+      setProfile(currentProfile);
       setIsAuthenticated(true);
       setAuthError(null);
+      return currentProfile;
+    } catch (error) {
+      setUser(null);
+      setProfile(null);
+      setIsAuthenticated(false);
+      setAuthError({
+        type: 'no_profile',
+        message: error.message || 'Perfil não encontrado. Contate o administrador.',
+      });
+      return null;
     }
   };
 
   useEffect(() => {
-    // Check existing session on mount
+    let mounted = true;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      fetchProfile(session?.user ?? null).finally(() => setIsLoadingAuth(false));
+      if (!mounted) return;
+      fetchProfile(session?.user ?? null).finally(() => {
+        if (mounted) setIsLoadingAuth(false);
+      });
     });
 
-    // Listen for auth state changes (login / logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      fetchProfile(session?.user ?? null).finally(() => setIsLoadingAuth(false));
+      if (!mounted) return;
+      setIsLoadingAuth(true);
+      fetchProfile(session?.user ?? null).finally(() => {
+        if (mounted) setIsLoadingAuth(false);
+      });
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await flowdesk.auth.logout();
     setUser(null);
     setProfile(null);
     setIsAuthenticated(false);
+    setAuthError(null);
   };
 
-  const navigateToLogin = () => {
-    // Handled by App.jsx routing — just clear state
-    logout();
+  const refetchProfile = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    return fetchProfile(authUser);
   };
 
-  const isAdmin = profile?.role === 'admin';
-
-  // allowed_tabs: admin sees everything (null = no restriction), others see their list
-  const allowedTabs = isAdmin ? null : (profile?.allowed_tabs ?? []);
-
-  return (
-    <AuthContext.Provider value={{
+  const value = useMemo(() => {
+    const isAdmin = profile?.role === 'admin';
+    return {
       user,
       profile,
       isAuthenticated,
@@ -77,18 +87,25 @@ export const AuthProvider = ({ children }) => {
       authError,
       appPublicSettings: null,
       isAdmin,
-      allowedTabs,
+      allowedTabs: isAdmin ? null : (profile?.allowed_tabs ?? []),
       logout,
-      navigateToLogin,
-      refetchProfile: () => supabase.auth.getUser().then(({ data: { user: u } }) => fetchProfile(u)),
-    }}>
+      navigateToLogin: logout,
+      refetchProfile,
+      checkAppState: refetchProfile,
+    };
+  }, [user, profile, isAuthenticated, isLoadingAuth, isLoadingPublicSettings, authError]);
+
+  return (
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
 };

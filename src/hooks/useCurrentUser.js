@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 
 export function useCurrentUser() {
   const { data: user = null } = useQuery({
     queryKey: ['current-user'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => flowdesk.auth.me(),
     staleTime: 5 * 60 * 1000,
   });
   return user;

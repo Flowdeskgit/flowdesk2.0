@@ -2,22 +2,20 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#378add" />
     <link rel="manifest" href="/manifest.json" />
-    <title>MCR Advocacia</title>
-    <!--
-      Apply dark class BEFORE any CSS or React loads to prevent flash of wrong theme.
-      Reads from localStorage synchronously — zero layout shift.
-    -->
+    <title>Flowdesk ADV</title>
     <script>
       (function () {
         try {
           var mode = localStorage.getItem('flowdesk-theme-mode') || 'claro';
           var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           var isDark = mode === 'escuro' || (mode === 'automatico' && systemDark);
-          if (isDark) document.documentElement.classList.add('dark');
-        } catch (e) {}
+          document.documentElement.classList.toggle('dark', isDark);
+        } catch (error) {
+          document.documentElement.classList.remove('dark');
+        }
       })();
     </script>
   </head>

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Clock, Calendar } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 
 export default function TVDashboard({ tarefas, atendimentos, alertas, pessoas }) {
   const [currentTime, setCurrentTime] = useState(new Date());

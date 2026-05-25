@@ -1,0 +1,53 @@
+{
+  "name": "Alerta",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo do alerta"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Pend\u00eancia",
+        "Prazo",
+        "Atualiza\u00e7\u00e3o",
+        "Outro"
+      ],
+      "default": "Outro"
+    },
+    "data_vencimento": {
+      "type": "string",
+      "format": "date"
+    },
+    "data_resolucao": {
+      "type": "string",
+      "format": "date"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Ativo",
+        "Resolvido",
+        "Ignorado"
+      ],
+      "default": "Ativo"
+    },
+    "responsavel_id": {
+      "type": "string"
+    },
+    "atendimento_id": {
+      "type": "string"
+    },
+    "tarefa_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "titulo",
+    "status"
+  ]
+}

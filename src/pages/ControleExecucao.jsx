@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, ClipboardList, Edit, Trash2, Upload, X, FileText, ArrowRight } from 'lucide-react';
+import { Plus, Search, ClipboardList, Edit, Trash2, X, FileText, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '../utils';
 import { Button } from '@/components/ui/button';
@@ -36,18 +36,18 @@ export default function ControleExecucao() {
 
   const { data: controles = [] } = useQuery({
     queryKey: ['controle-execucao'],
-    queryFn: () => base44.entities.ControleProcessoExecucao.list('-created_date'),
+    queryFn: () => flowdesk.entities.ControleProcessoExecucao.list('-created_date'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      const controle = await base44.entities.ControleProcessoExecucao.create(data);
-      await base44.entities.Auditoria.create({
+      const controle = await flowdesk.entities.ControleProcessoExecucao.create(data);
+      await flowdesk.entities.Auditoria.create({
         modulo: 'Processo Judicial',
         tipo_acao: 'Criação',
         registro_id: controle.id,
@@ -64,8 +64,8 @@ export default function ControleExecucao() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const controle = await base44.entities.ControleProcessoExecucao.update(id, data);
-      await base44.entities.Auditoria.create({
+      const controle = await flowdesk.entities.ControleProcessoExecucao.update(id, data);
+      await flowdesk.entities.Auditoria.create({
         modulo: 'Processo Judicial',
         tipo_acao: 'Edição',
         registro_id: controle.id,
@@ -85,10 +85,10 @@ export default function ControleExecucao() {
           return;
         }
 
-        const user = await base44.auth.me();
+        const user = await flowdesk.auth.me();
         
         // Criar tarefa
-        const novaTarefa = await base44.entities.Tarefa.create({
+        const novaTarefa = await flowdesk.entities.Tarefa.create({
           titulo: controleAtualizado.titulo || 'Sem título',
           descricao: controleAtualizado.descricao || '',
           responsavel_id: controleAtualizado.responsavel_id || '',
@@ -102,7 +102,7 @@ export default function ControleExecucao() {
         });
         
         // Atualizar controle
-        await base44.entities.ControleProcessoExecucao.update(controleAtualizado.id, {
+        await flowdesk.entities.ControleProcessoExecucao.update(controleAtualizado.id, {
           tarefa_criada_id: novaTarefa.id,
           status: 'Tarefa gerada',
           data_conversao_tarefa: new Date().toISOString(),
@@ -127,10 +127,10 @@ export default function ControleExecucao() {
         throw new Error('Este controle já foi convertido em tarefa.');
       }
 
-      const user = await base44.auth.me();
+      const user = await flowdesk.auth.me();
       
       // Criar tarefa simples
-      const novaTarefa = await base44.entities.Tarefa.create({
+      const novaTarefa = await flowdesk.entities.Tarefa.create({
         titulo: controle.titulo || 'Sem título',
         descricao: controle.descricao || '',
         responsavel_id: controle.responsavel_id || '',
@@ -144,7 +144,7 @@ export default function ControleExecucao() {
       });
       
       // Atualizar controle
-      await base44.entities.ControleProcessoExecucao.update(controle.id, {
+      await flowdesk.entities.ControleProcessoExecucao.update(controle.id, {
         tarefa_criada_id: novaTarefa.id,
         status: 'Tarefa gerada',
         data_conversao_tarefa: new Date().toISOString(),
@@ -165,7 +165,7 @@ export default function ControleExecucao() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ControleProcessoExecucao.delete(id),
+    mutationFn: (id) => flowdesk.entities.ControleProcessoExecucao.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['controle-execucao'] });
     },
@@ -180,7 +180,7 @@ export default function ControleExecucao() {
     
     for (const file of files) {
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const { file_url } = await flowdesk.integrations.Core.UploadFile({ file });
         uploadedUrls.push(file_url);
       } catch (error) {
         console.error('Erro ao fazer upload:', error);

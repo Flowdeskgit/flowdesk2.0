@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Trophy, Star, Zap } from 'lucide-react';
+import { Trophy, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const podiumConfig = [

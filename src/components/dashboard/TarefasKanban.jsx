@@ -1,31 +1,33 @@
 import React, { useMemo } from 'react';
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { AlertTriangle, Clock, CheckCircle2, User } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, Clock, CheckCircle2, User, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const COLS = [
-  { id: 'Pendente', label: 'Pendente', color: 'bg-slate-100 border-slate-200', header: 'bg-slate-600', dot: 'bg-slate-400' },
-  { id: 'Em andamento', label: 'Em Andamento', color: 'bg-blue-50 border-blue-200', header: 'bg-blue-600', dot: 'bg-blue-500' },
-  { id: 'Atrasada', label: 'Atrasadas', color: 'bg-red-50 border-red-200', header: 'bg-red-600', dot: 'bg-red-500' },
-  { id: 'Concluída', label: 'Concluídas', color: 'bg-green-50 border-green-200', header: 'bg-green-600', dot: 'bg-green-500' },
+  { id: 'Urgente',     label: 'Urgente',      color: 'bg-muted/60 border-brand-steel',    dot: 'bg-brand-steel' },
+  { id: 'Pendente',    label: 'Pendente',     color: 'bg-muted/40 border-border',         dot: 'bg-muted-foreground' },
+  { id: 'Em andamento',label: 'Em Andamento', color: 'bg-brand-electric/5 border-brand-electric/30', dot: 'bg-brand-electric' },
+  { id: 'Atrasada',   label: 'Atrasadas',    color: 'bg-destructive/5 border-destructive/30', dot: 'bg-destructive' },
+  { id: 'Concluída',  label: 'Concluídas',   color: 'bg-emerald-50/50 border-emerald-200', dot: 'bg-emerald-500' },
 ];
 
 const PRIORIDADE_COLORS = {
-  Alta: 'bg-red-100 text-red-700',
-  Urgente: 'bg-rose-200 text-rose-800',
-  Média: 'bg-amber-100 text-amber-700',
-  Baixa: 'bg-slate-100 text-slate-600',
+  Alta:    'bg-destructive/10 text-destructive',
+  Urgente: 'bg-brand-steel/15 text-brand-steel',
+  Média:   'bg-amber-100 text-amber-700',
+  Baixa:   'bg-muted text-muted-foreground',
 };
 
 function getStatusEffetivo(t) {
-  if (t.status === 'Concluída') return 'Concluída';
+  if (t.status === 'Concluída' || t.status_detalhado === 'Concluída' || t.status === 'Não realizada / Impedimento') return 'Concluída';
+  const sd = t.status_detalhado || t.status || 'Pendente';
+  if (sd === 'Urgente') return 'Urgente';
   if (t.data_vencimento) {
     const diff = differenceInDays(parseISO(t.data_vencimento), new Date());
     if (diff < 0) return 'Atrasada';
   }
-  return t.status_detalhado || t.status || 'Pendente';
+  return sd;
 }
 
 function TarefaCard({ tarefa, pessoas }) {
@@ -33,15 +35,21 @@ function TarefaCard({ tarefa, pessoas }) {
   const diff = tarefa.data_vencimento ? differenceInDays(parseISO(tarefa.data_vencimento), new Date()) : null;
   const status = getStatusEffetivo(tarefa);
   const isAtrasada = status === 'Atrasada';
+  const isUrgente = status === 'Urgente';
   const venceHoje = diff === 0;
 
   return (
-    <div className={`bg-card rounded-xl border p-3 hover:shadow-sm transition-all ${isAtrasada ? 'border-red-200 bg-red-50/30' : 'border-border'}`}>
+    <div className={`bg-card rounded-xl border p-3 hover:shadow-sm transition-all ${isAtrasada ? 'border-destructive/30 bg-destructive/5' : isUrgente ? 'border-brand-steel/40 bg-brand-steel/5' : 'border-border'}`}>
       <p className="text-sm font-semibold text-foreground line-clamp-2 mb-2">{tarefa.titulo}</p>
       <div className="flex flex-wrap gap-1 mb-2">
         {tarefa.prioridade && tarefa.prioridade !== 'Média' && (
           <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${PRIORIDADE_COLORS[tarefa.prioridade] || ''}`}>
             {tarefa.prioridade}
+          </span>
+        )}
+        {isUrgente && (
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-brand-steel/15 text-brand-steel flex items-center gap-1">
+            <Zap className="h-2.5 w-2.5" />Urgente
           </span>
         )}
         {isAtrasada && (
@@ -90,10 +98,10 @@ export default function TarefasKanban({ tarefas, pessoas = [] }) {
           <h3 className="font-semibold text-foreground text-sm">Kanban de Tarefas</h3>
           <p className="text-xs text-muted-foreground">{tarefas.length} tarefas no total</p>
         </div>
-        <Link to="/Tarefas" className="text-xs text-rose-600 hover:underline font-medium">Ver todas →</Link>
+        <Link to="/Tarefas" className="text-xs text-brand-electric hover:underline font-medium">Ver todas →</Link>
       </div>
 
-      <div className="p-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="p-4 grid grid-cols-2 lg:grid-cols-5 gap-3">
         {COLS.map(col => {
           const cards = grouped[col.id] || [];
           return (

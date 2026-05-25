@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Target, Edit, Trash2, MoreVertical, Users, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -53,21 +53,21 @@ export default function LandingPages() {
 
   const { data: landingPages = [] } = useQuery({
     queryKey: ['landing-pages'],
-    queryFn: () => base44.entities.LandingPage.list('-created_date'),
+    queryFn: () => flowdesk.entities.LandingPage.list('-created_date'),
   });
 
   const { data: leads = [] } = useQuery({
     queryKey: ['leads-comercial'],
-    queryFn: () => base44.entities.LeadComercial.list('-created_date'),
+    queryFn: () => flowdesk.entities.LeadComercial.list('-created_date'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const createLPMutation = useMutation({
-    mutationFn: (data) => base44.entities.LandingPage.create(data),
+    mutationFn: (data) => flowdesk.entities.LandingPage.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['landing-pages'] });
       closeLPDialog();
@@ -75,7 +75,7 @@ export default function LandingPages() {
   });
 
   const updateLPMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.LandingPage.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.LandingPage.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['landing-pages'] });
       closeLPDialog();
@@ -83,14 +83,14 @@ export default function LandingPages() {
   });
 
   const deleteLPMutation = useMutation({
-    mutationFn: (id) => base44.entities.LandingPage.delete(id),
+    mutationFn: (id) => flowdesk.entities.LandingPage.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['landing-pages'] });
     },
   });
 
   const createLeadMutation = useMutation({
-    mutationFn: (data) => base44.entities.LeadComercial.create(data),
+    mutationFn: (data) => flowdesk.entities.LeadComercial.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads-comercial'] });
       closeLeadDialog();
@@ -98,7 +98,7 @@ export default function LandingPages() {
   });
 
   const updateLeadMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.LeadComercial.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.LeadComercial.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads-comercial'] });
       closeLeadDialog();
@@ -106,7 +106,7 @@ export default function LandingPages() {
   });
 
   const deleteLeadMutation = useMutation({
-    mutationFn: (id) => base44.entities.LeadComercial.delete(id),
+    mutationFn: (id) => flowdesk.entities.LeadComercial.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads-comercial'] });
     },

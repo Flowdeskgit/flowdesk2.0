@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -66,11 +66,11 @@ export default function Setores() {
 
   const { data: setores = [], isLoading } = useQuery({
     queryKey: ['setores'],
-    queryFn: () => base44.entities.Setor.list(),
+    queryFn: () => flowdesk.entities.Setor.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Setor.create(data),
+    mutationFn: (data) => flowdesk.entities.Setor.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['setores'] });
       closeDialog();
@@ -78,7 +78,7 @@ export default function Setores() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Setor.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.Setor.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['setores'] });
       closeDialog();
@@ -86,7 +86,7 @@ export default function Setores() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Setor.delete(id),
+    mutationFn: (id) => flowdesk.entities.Setor.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['setores'] });
     },

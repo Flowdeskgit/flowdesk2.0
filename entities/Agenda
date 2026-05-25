@@ -1,0 +1,88 @@
+{
+  "name": "Agenda",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo do evento"
+    },
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o detalhada do evento"
+    },
+    "data_evento": {
+      "type": "string",
+      "format": "date",
+      "description": "Data do evento"
+    },
+    "hora_inicio": {
+      "type": "string",
+      "description": "Hora de in\u00edcio (HH:MM)"
+    },
+    "hora_termino": {
+      "type": "string",
+      "description": "Hora de t\u00e9rmino (HH:MM)"
+    },
+    "tipo_evento": {
+      "type": "string",
+      "enum": [
+        "Atendimento",
+        "Audi\u00eancia",
+        "Prazo processual",
+        "Reuni\u00e3o interna",
+        "Retorno ao cliente",
+        "Outro"
+      ],
+      "default": "Outro",
+      "description": "Tipo do evento"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Agendado",
+        "Realizado",
+        "Cancelado"
+      ],
+      "default": "Agendado",
+      "description": "Status do evento"
+    },
+    "tarja_id": {
+      "type": "string",
+      "description": "ID da tarja/cor personalizada"
+    },
+    "responsaveis_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "IDs dos usu\u00e1rios respons\u00e1veis pelo evento"
+    },
+    "atendimento_id": {
+      "type": "string",
+      "description": "ID do atendimento vinculado"
+    },
+    "tarefa_id": {
+      "type": "string",
+      "description": "ID da tarefa vinculada"
+    },
+    "andamento_administrativo_id": {
+      "type": "string",
+      "description": "ID do processo administrativo vinculado"
+    },
+    "controle_execucao_id": {
+      "type": "string",
+      "description": "ID do processo judicial vinculado"
+    },
+    "observacoes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es adicionais"
+    }
+  },
+  "required": [
+    "titulo",
+    "data_evento",
+    "hora_inicio",
+    "tipo_evento",
+    "status"
+  ]
+}

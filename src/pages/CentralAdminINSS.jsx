@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -31,39 +31,39 @@ export default function CentralAdminINSS() {
 
   const { data: todosProcessos = [] } = useQuery({
     queryKey: ['processos-selector'],
-    queryFn: () => base44.entities.Processo.list('-created_date', 500),
+    queryFn: () => flowdesk.entities.Processo.list('-created_date', 500),
     enabled: !processoId,
   });
 
   const { data: todosClientes = [] } = useQuery({
     queryKey: ['clientes-selector'],
-    queryFn: () => base44.entities.Cliente.list('-created_date', 500),
+    queryFn: () => flowdesk.entities.Cliente.list('-created_date', 500),
     enabled: !processoId,
   });
 
   const { data: processo } = useQuery({
     queryKey: ['processo', resolvedProcessoId],
-    queryFn: () => base44.entities.Processo.filter({ id: resolvedProcessoId }),
+    queryFn: () => flowdesk.entities.Processo.filter({ id: resolvedProcessoId }),
     enabled: !!resolvedProcessoId,
     select: (data) => data?.[0],
   });
 
   const { data: cliente } = useQuery({
     queryKey: ['cliente', processo?.cliente_id],
-    queryFn: () => base44.entities.Cliente.filter({ id: processo?.cliente_id }),
+    queryFn: () => flowdesk.entities.Cliente.filter({ id: processo?.cliente_id }),
     enabled: !!processo?.cliente_id,
     select: (data) => data?.[0],
   });
 
   const { data: central, isLoading: loadingCentral } = useQuery({
     queryKey: ['central-inss', resolvedProcessoId],
-    queryFn: () => base44.entities.CentralAdminINSS.filter({ processo_id: resolvedProcessoId }),
+    queryFn: () => flowdesk.entities.CentralAdminINSS.filter({ processo_id: resolvedProcessoId }),
     enabled: !!resolvedProcessoId,
     select: (data) => data?.[0],
   });
 
   const criarCentralMutation = useMutation({
-    mutationFn: (data) => base44.entities.CentralAdminINSS.create(data),
+    mutationFn: (data) => flowdesk.entities.CentralAdminINSS.create(data),
     onSuccess: () => queryClient.invalidateQueries(['central-inss', resolvedProcessoId]),
   });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import {
   format,
   parseISO,
@@ -40,21 +40,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+
+
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import EventoFormDialog from '@/components/agenda/EventoFormDialog';
+import { ConvertTarefaDialog, ConvertControleDialog, ConvertMonitorDialog, FazerAgendamentoDialog } from '@/components/agenda/PublicacoesDialogs';
 
 // Função para detectar cor (tarja selecionada tem prioridade, depois palavras-chave)
 const getCorEvento = (evento, configuracoes) => {
@@ -225,6 +221,7 @@ export default function Agenda() {
   const [convertPubResponsavelId, setConvertPubResponsavelId] = useState('');
   const [convertPubDataVencimento, setConvertPubDataVencimento] = useState('');
   const [convertPubDescricao, setConvertPubDescricao] = useState('');
+  const [convertPubStatusTarefa, setConvertPubStatusTarefa] = useState('Pendente');
 
   // Converter Publicação -> Controle de Execução
   const [isConvertPubControleDialogOpen, setIsConvertPubControleDialogOpen] = useState(false);
@@ -264,27 +261,27 @@ export default function Agenda() {
 
   const { data: eventos = [] } = useQuery({
     queryKey: ['agenda'],
-    queryFn: () => base44.entities.Agenda.list('-data_evento'),
+    queryFn: () => flowdesk.entities.Agenda.list('-data_evento'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const { data: atendimentos = [] } = useQuery({
     queryKey: ['atendimentos'],
-    queryFn: () => base44.entities.Atendimento.list(),
+    queryFn: () => flowdesk.entities.Atendimento.list(),
   });
 
   const { data: tarefas = [] } = useQuery({
     queryKey: ['tarefas'],
-    queryFn: () => base44.entities.Tarefa.list(),
+    queryFn: () => flowdesk.entities.Tarefa.list(),
   });
 
   const { data: configuracoes = [] } = useQuery({
     queryKey: ['configuracoes-agenda'],
-    queryFn: () => base44.entities.ConfiguracaoAgenda.list(),
+    queryFn: () => flowdesk.entities.ConfiguracaoAgenda.list(),
   });
 
   const {
@@ -344,7 +341,7 @@ export default function Agenda() {
   });
 
   const createConfigMutation = useMutation({
-    mutationFn: (data) => base44.entities.ConfiguracaoAgenda.create(data),
+    mutationFn: (data) => flowdesk.entities.ConfiguracaoAgenda.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configuracoes-agenda'] });
       setIsConfigDialogOpen(false);
@@ -360,22 +357,22 @@ export default function Agenda() {
   });
 
   const deleteConfigMutation = useMutation({
-    mutationFn: (id) => base44.entities.ConfiguracaoAgenda.delete(id),
+    mutationFn: (id) => flowdesk.entities.ConfiguracaoAgenda.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['configuracoes-agenda'] });
     },
   });
 
   const createNotification = useMutation({
-    mutationFn: (data) => base44.entities.Notificacao.create(data),
+    mutationFn: (data) => flowdesk.entities.Notificacao.create(data),
   });
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
-      const user = await base44.auth.me();
-      const novoEvento = await base44.entities.Agenda.create(data);
+      const user = await flowdesk.auth.me();
+      const novoEvento = await flowdesk.entities.Agenda.create(data);
 
-      await base44.entities.HistoricoAgenda.create({
+      await flowdesk.entities.HistoricoAgenda.create({
         evento_id: novoEvento.id,
         usuario_id: user.id,
         tipo_acao: 'Criação',
@@ -408,8 +405,8 @@ export default function Agenda() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-      const user = await base44.auth.me();
-      const eventoAtualizado = await base44.entities.Agenda.update(id, data);
+      const user = await flowdesk.auth.me();
+      const eventoAtualizado = await flowdesk.entities.Agenda.update(id, data);
 
       const alteracoes = [];
       if (editingItem?.titulo !== data.titulo) {
@@ -451,7 +448,7 @@ export default function Agenda() {
       }
 
       for (const alteracao of alteracoes) {
-        await base44.entities.HistoricoAgenda.create(alteracao);
+        await flowdesk.entities.HistoricoAgenda.create(alteracao);
       }
 
       return eventoAtualizado;
@@ -486,11 +483,11 @@ export default function Agenda() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id) => {
-      const user = await base44.auth.me();
+      const user = await flowdesk.auth.me();
       const evento = eventos.find((e) => e.id === id);
 
       if (evento) {
-        await base44.entities.HistoricoAgenda.create({
+        await flowdesk.entities.HistoricoAgenda.create({
           evento_id: id,
           usuario_id: user.id,
           tipo_acao: 'Exclusão',
@@ -498,7 +495,7 @@ export default function Agenda() {
         });
       }
 
-      return base44.entities.Agenda.delete(id);
+      return flowdesk.entities.Agenda.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agenda'] });
@@ -598,7 +595,7 @@ export default function Agenda() {
   };
 
   const createAgendaEventForTask = async ({ tarefa, responsavelId, dateISO }) => {
-    const user = await base44.auth.me();
+    const user = await flowdesk.auth.me();
 
     const payload = {
       titulo: tarefa?.titulo || 'Tarefa',
@@ -617,9 +614,9 @@ export default function Agenda() {
       observacoes: 'Criado automaticamente a partir de Publicação.',
     };
 
-    const novoEvento = await base44.entities.Agenda.create(payload);
+    const novoEvento = await flowdesk.entities.Agenda.create(payload);
 
-    await base44.entities.HistoricoAgenda.create({
+    await flowdesk.entities.HistoricoAgenda.create({
       evento_id: novoEvento.id,
       usuario_id: user.id,
       tipo_acao: 'Criação',
@@ -649,6 +646,7 @@ export default function Agenda() {
     setConvertPubResponsavelId('');
     setConvertPubDataVencimento(guessDefaultDueDateForPublicacao(row));
     setConvertPubDescricao(buildDescricaoFromPublicacao(row));
+    setConvertPubStatusTarefa('Pendente');
     setIsConvertPubDialogOpen(true);
   };
 
@@ -658,6 +656,7 @@ export default function Agenda() {
     setConvertPubResponsavelId('');
     setConvertPubDataVencimento('');
     setConvertPubDescricao('');
+    setConvertPubStatusTarefa('Pendente');
   };
 
   const openConvertPublicacaoControleDialog = (row) => {
@@ -752,7 +751,7 @@ export default function Agenda() {
   });
 
   const converterPublicacaoEmTarefaMutation = useMutation({
-    mutationFn: async ({ row, responsavel_id, data_vencimento, descricao }) => {
+    mutationFn: async ({ row, responsavel_id, data_vencimento, descricao, status_detalhado }) => {
       if (!row) throw new Error('Publicação inválida.');
       if (!responsavel_id) throw new Error('Selecione o responsável para criar a tarefa.');
       if (!data_vencimento) throw new Error('Selecione a data de vencimento para criar a tarefa.');
@@ -761,13 +760,20 @@ export default function Agenda() {
       const hoje = new Date();
       const titulo = buildTituloFromPublicacao(row);
 
+      // Calcula automaticamente se já está atrasada
+      const dataVenc = new Date(data_vencimento + 'T23:59:59');
+      const statusFinal = status_detalhado === 'Concluída'
+        ? 'Concluída'
+        : (dataVenc < hoje ? 'Atrasada' : (status_detalhado || 'Pendente'));
+
       const payloadTarefa = {
         titulo,
         descricao: descricao ?? buildDescricaoFromPublicacao(row),
         responsavel_id,
         data_inicio: toISODateOnly(hoje),
         data_vencimento,
-        status: 'Pendente',
+        status: statusFinal === 'Concluída' ? 'Concluída' : 'Em aberto',
+        status_detalhado: statusFinal,
         prioridade: 'Média',
         observacoes: 'Origem: Publicação',
         motivo_atraso: '',
@@ -776,7 +782,7 @@ export default function Agenda() {
         atendimento_id: '',
       };
 
-      const novaTarefa = await base44.entities.Tarefa.create(payloadTarefa);
+      const novaTarefa = await flowdesk.entities.Tarefa.create(payloadTarefa);
 
       await createAgendaEventForTask({
         tarefa: novaTarefa,
@@ -820,9 +826,9 @@ export default function Agenda() {
         responsavel_id: controleData.responsavel_id || '',
       };
 
-      const controle = await base44.entities.ControleProcessoExecucao.create(payload);
+      const controle = await flowdesk.entities.ControleProcessoExecucao.create(payload);
 
-      await base44.entities.Auditoria.create({
+      await flowdesk.entities.Auditoria.create({
         modulo: 'Processo Judicial',
         tipo_acao: 'Criação',
         registro_id: controle.id,
@@ -862,7 +868,7 @@ export default function Agenda() {
           ? '[AGENDAMENTO_PUBLICACAO:PERICIA]'
           : '[AGENDAMENTO_PUBLICACAO:AUDIENCIA]';
 
-      const user = await base44.auth.me();
+      const user = await flowdesk.auth.me();
 
       const payload = {
         titulo: agendamentoData.titulo.trim(),
@@ -883,9 +889,9 @@ export default function Agenda() {
           (String(agendamentoData.observacoes || '').includes(marker) ? '' : ` ${marker}`),
       };
 
-      const novoEvento = await base44.entities.Agenda.create(payload);
+      const novoEvento = await flowdesk.entities.Agenda.create(payload);
 
-      await base44.entities.HistoricoAgenda.create({
+      await flowdesk.entities.HistoricoAgenda.create({
         evento_id: novoEvento.id,
         usuario_id: user.id,
         tipo_acao: 'Criação',
@@ -942,7 +948,7 @@ export default function Agenda() {
         }
       }
 
-      const registro = await base44.entities.MonitoramentoProcessual.create({
+      const registro = await flowdesk.entities.MonitoramentoProcessual.create({
         numero_processo: monitorData.numero_processo.trim(),
         cliente_parte: monitorData.cliente_parte.trim(),
         responsavel_id: monitorData.responsavel_id,
@@ -954,7 +960,7 @@ export default function Agenda() {
         status: 'Em Monitoramento',
       });
 
-      await base44.entities.Auditoria.create({
+      await flowdesk.entities.Auditoria.create({
         modulo: 'Processo Judicial',
         tipo_acao: 'Criação',
         registro_id: registro.id,
@@ -1771,901 +1777,91 @@ export default function Agenda() {
           </>
         )}
 
-        <Dialog
-          open={isDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) closeDialog();
-            else setIsDialogOpen(true);
+        <EventoFormDialog
+          isOpen={isDialogOpen}
+          onClose={closeDialog}
+          editingItem={editingItem}
+          formData={formData}
+          setFormData={setFormData}
+          onSubmit={handleSubmit}
+          pessoas={pessoas}
+          getPessoaNome={getPessoaNome}
+          isCreating={createMutation.isPending}
+          isUpdating={updateMutation.isPending}
+        />
+
+        <ConvertTarefaDialog
+          isOpen={isConvertPubDialogOpen}
+          onClose={closeConvertPublicacaoDialog}
+          publicacao={convertPublicacao}
+          responsavelId={convertPubResponsavelId}
+          setResponsavelId={setConvertPubResponsavelId}
+          statusTarefa={convertPubStatusTarefa}
+          setStatusTarefa={setConvertPubStatusTarefa}
+          dataVencimento={convertPubDataVencimento}
+          setDataVencimento={setConvertPubDataVencimento}
+          descricao={convertPubDescricao}
+          setDescricao={setConvertPubDescricao}
+          pessoas={pessoas}
+          isPending={converterPublicacaoEmTarefaMutation.isPending}
+          onSubmit={() => {
+            if (!convertPublicacao) return;
+            if (!convertPubResponsavelId || !convertPubDataVencimento) { alert('Responsável e Data de Vencimento são obrigatórios.'); return; }
+            if (!publicacaoConvertWebhookUrl) { alert('Configure o webhook POST /publicacoes/convertido.'); return; }
+            converterPublicacaoEmTarefaMutation.mutate({ row: convertPublicacao, responsavel_id: convertPubResponsavelId, data_vencimento: convertPubDataVencimento, descricao: convertPubDescricao, status_detalhado: convertPubStatusTarefa || 'Pendente' });
           }}
-        >
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingItem ? 'Detalhes do Evento' : 'Novo Evento'}</DialogTitle>
-            </DialogHeader>
+        />
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Título *</Label>
-                <Input
-                  value={formData.titulo}
-                  onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  value={formData.descricao}
-                  onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
-                  rows={4}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Data *</Label>
-                  <Input
-                    type="date"
-                    value={formData.data_evento}
-                    onChange={(e) => setFormData({ ...formData, data_evento: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Tipo *</Label>
-                  <Select
-                    value={formData.tipo_evento}
-                    onValueChange={(value) => setFormData({ ...formData, tipo_evento: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Atendimento">Atendimento</SelectItem>
-                      <SelectItem value="Audiência">Audiência</SelectItem>
-                      <SelectItem value="Perícia">Perícia</SelectItem>
-                      <SelectItem value="Prazo processual">Prazo processual</SelectItem>
-                      <SelectItem value="Reunião interna">Reunião interna</SelectItem>
-                      <SelectItem value="Retorno ao cliente">Retorno ao cliente</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Hora de Início *</Label>
-                  <Input
-                    type="time"
-                    value={formData.hora_inicio}
-                    onChange={(e) => setFormData({ ...formData, hora_inicio: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Hora de Término</Label>
-                  <Input
-                    type="time"
-                    value={formData.hora_termino}
-                    onChange={(e) => setFormData({ ...formData, hora_termino: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) => setFormData({ ...formData, status: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Agendado">Agendado</SelectItem>
-                    <SelectItem value="Realizado">Realizado</SelectItem>
-                    <SelectItem value="Cancelado">Cancelado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Responsável principal</Label>
-                <Select
-                  value={formData.responsaveis_ids?.[0] || ''}
-                  onValueChange={(value) =>
-                    setFormData({
-                      ...formData,
-                      responsaveis_ids: value ? [value] : [],
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pessoas.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formData.responsaveis_ids?.length > 0 && (
-                  <p className="text-xs text-slate-500">
-                    Responsável atual: {getPessoaNome(formData.responsaveis_ids[0])}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  rows={3}
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={closeDialog}>
-                  Fechar
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-slate-900 hover:bg-slate-800"
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {editingItem
-                    ? updateMutation.isPending
-                      ? 'Salvando...'
-                      : 'Salvar'
-                    : createMutation.isPending
-                    ? 'Criando...'
-                    : 'Criar Evento'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog
-          open={isConvertPubDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) closeConvertPublicacaoDialog();
-            else setIsConvertPubDialogOpen(true);
+        <ConvertControleDialog
+          isOpen={isConvertPubControleDialogOpen}
+          onClose={closeConvertPublicacaoControleDialog}
+          publicacao={convertPubControlePublicacao}
+          form={convertPubControleForm}
+          setForm={setConvertPubControleForm}
+          pessoas={pessoas}
+          isPending={converterPublicacaoEmControleMutation.isPending}
+          onSubmit={() => {
+            if (!convertPubControlePublicacao) return;
+            if (!convertPubControleForm.titulo?.trim()) { alert('O título é obrigatório.'); return; }
+            if (!publicacaoConvertWebhookUrl) { alert('Configure o webhook POST /publicacoes/convertido.'); return; }
+            converterPublicacaoEmControleMutation.mutate({ row: convertPubControlePublicacao, controleData: convertPubControleForm });
           }}
-        >
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Converter Publicação em Tarefa</DialogTitle>
-            </DialogHeader>
+        />
 
-            <div className="space-y-4">
-              {convertPublicacao && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-sm text-slate-700">
-                    <span className="font-semibold">Processo:</span> {convertPublicacao.processo || '-'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    <span className="font-semibold">Parte:</span> {convertPublicacao.parte || '-'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    <span className="font-semibold">Row:</span> {convertPublicacao.rowNumber ?? '-'}
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Responsável pela Execução *</Label>
-                <Select value={convertPubResponsavelId} onValueChange={setConvertPubResponsavelId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pessoas.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Data de Vencimento *</Label>
-                <Input
-                  type="date"
-                  value={convertPubDataVencimento}
-                  onChange={(e) => setConvertPubDataVencimento(e.target.value)}
-                />
-                <p className="text-xs text-slate-500">
-                  Essa data também será usada para criar automaticamente o evento na Agenda.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Descricao</Label>
-                <Textarea
-                  value={convertPubDescricao}
-                  onChange={(e) => setConvertPubDescricao(e.target.value)}
-                  placeholder="Descreva a tarefa..."
-                  rows={5}
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={closeConvertPublicacaoDialog}>
-                  Cancelar
-                </Button>
-
-                <Button
-                  type="button"
-                  className="bg-slate-900 hover:bg-slate-800"
-                  disabled={converterPublicacaoEmTarefaMutation.isPending}
-                  onClick={() => {
-                    if (!convertPublicacao) return;
-                    if (!convertPubResponsavelId || !convertPubDataVencimento) {
-                      alert('Responsável e Data de Vencimento são obrigatórios.');
-                      return;
-                    }
-                    if (!publicacaoConvertWebhookUrl) {
-                      alert('Configure o webhook POST /publicacoes/convertido.');
-                      return;
-                    }
-
-                    converterPublicacaoEmTarefaMutation.mutate({
-                      row: convertPublicacao,
-                      responsavel_id: convertPubResponsavelId,
-                      data_vencimento: convertPubDataVencimento,
-                      descricao: convertPubDescricao,
-                    });
-                  }}
-                >
-                  {converterPublicacaoEmTarefaMutation.isPending ? 'Criando...' : 'Criar Tarefa'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog
-          open={isConvertPubControleDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) closeConvertPublicacaoControleDialog();
-            else setIsConvertPubControleDialogOpen(true);
+        <ConvertMonitorDialog
+          isOpen={isConvertPubMonitorDialogOpen}
+          onClose={closeConvertPublicacaoMonitorDialog}
+          publicacao={convertPubMonitorPublicacao}
+          form={convertPubMonitorForm}
+          setForm={setConvertPubMonitorForm}
+          pessoas={pessoas}
+          isPending={converterPublicacaoEmMonitoramentoMutation.isPending}
+          onSubmit={() => {
+            if (!convertPubMonitorPublicacao) return;
+            if (!publicacaoConvertWebhookUrl) { alert('Configure o webhook POST /publicacoes/convertido.'); return; }
+            converterPublicacaoEmMonitoramentoMutation.mutate({ row: convertPubMonitorPublicacao, monitorData: convertPubMonitorForm });
           }}
-        >
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Converter para Controle de Execução</DialogTitle>
-            </DialogHeader>
+        />
 
-            <div className="space-y-4">
-              {convertPubControlePublicacao && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                  <p className="text-sm text-slate-700">
-                    <span className="font-semibold">Processo:</span>{' '}
-                    {convertPubControlePublicacao.processo || '-'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    <span className="font-semibold">Parte:</span>{' '}
-                    {convertPubControlePublicacao.parte || '-'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    <span className="font-semibold">Row:</span>{' '}
-                    {convertPubControlePublicacao.rowNumber ?? '-'}
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Título *</Label>
-                <Input
-                  value={convertPubControleForm.titulo}
-                  onChange={(e) =>
-                    setConvertPubControleForm({
-                      ...convertPubControleForm,
-                      titulo: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Cliente</Label>
-                <Input
-                  value={convertPubControleForm.cliente}
-                  onChange={(e) =>
-                    setConvertPubControleForm({
-                      ...convertPubControleForm,
-                      cliente: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  value={convertPubControleForm.descricao}
-                  onChange={(e) =>
-                    setConvertPubControleForm({
-                      ...convertPubControleForm,
-                      descricao: e.target.value,
-                    })
-                  }
-                  rows={4}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea
-                  value={convertPubControleForm.observacoes}
-                  onChange={(e) =>
-                    setConvertPubControleForm({
-                      ...convertPubControleForm,
-                      observacoes: e.target.value,
-                    })
-                  }
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tipo de Movimentação</Label>
-                <Input
-                  value={convertPubControleForm.tipo_movimentacao}
-                  onChange={(e) =>
-                    setConvertPubControleForm({
-                      ...convertPubControleForm,
-                      tipo_movimentacao: e.target.value,
-                    })
-                  }
-                  placeholder="Ex: Citação, Penhora, Sentença..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Responsável</Label>
-                <Select
-                  value={convertPubControleForm.responsavel_id}
-                  onValueChange={(value) =>
-                    setConvertPubControleForm({
-                      ...convertPubControleForm,
-                      responsavel_id: value,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pessoas.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={convertPubControleForm.status}
-                  onValueChange={(value) =>
-                    setConvertPubControleForm({
-                      ...convertPubControleForm,
-                      status: value,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Em aberto">Em aberto</SelectItem>
-                    <SelectItem value="Gerar tarefa">Gerar tarefa</SelectItem>
-                    <SelectItem value="Concluído">Concluído</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={closeConvertPublicacaoControleDialog}>
-                  Cancelar
-                </Button>
-
-                <Button
-                  type="button"
-                  className="bg-emerald-700 hover:bg-emerald-800"
-                  disabled={converterPublicacaoEmControleMutation.isPending}
-                  onClick={() => {
-                    if (!convertPubControlePublicacao) return;
-                    if (!convertPubControleForm.titulo?.trim()) {
-                      alert('O título é obrigatório.');
-                      return;
-                    }
-                    if (!publicacaoConvertWebhookUrl) {
-                      alert('Configure o webhook POST /publicacoes/convertido.');
-                      return;
-                    }
-
-                    converterPublicacaoEmControleMutation.mutate({
-                      row: convertPubControlePublicacao,
-                      controleData: convertPubControleForm,
-                    });
-                  }}
-                >
-                  {converterPublicacaoEmControleMutation.isPending
-                    ? 'Criando...'
-                    : 'Criar Controle'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        {/* NOVO Dialog: Converter Publicação em Monitoramento Processual */}
-        <Dialog
-          open={isConvertPubMonitorDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) closeConvertPublicacaoMonitorDialog();
-            else setIsConvertPubMonitorDialogOpen(true);
+        <FazerAgendamentoDialog
+          isOpen={isFazerAgendamentoDialogOpen}
+          onClose={closeFazerAgendamentoDialog}
+          publicacao={agendamentoPublicacao}
+          form={agendamentoForm}
+          setForm={setAgendamentoForm}
+          pessoas={pessoas}
+          isPending={fazerAgendamentoMutation.isPending}
+          buildTituloFromPublicacao={buildTituloFromPublicacao}
+          onSubmit={() => {
+            if (!agendamentoPublicacao) return;
+            if (!agendamentoForm.titulo?.trim()) { alert('O título é obrigatório.'); return; }
+            if (!agendamentoForm.data_evento) { alert('A data é obrigatória.'); return; }
+            if (!agendamentoForm.hora_inicio) { alert('A hora de início é obrigatória.'); return; }
+            if (!agendamentoForm.responsavel_id) { alert('Selecione o responsável.'); return; }
+            if (!publicacaoConvertWebhookUrl) { alert('Configure o webhook POST /publicacoes/convertido.'); return; }
+            fazerAgendamentoMutation.mutate({ row: agendamentoPublicacao, agendamentoData: agendamentoForm });
           }}
-        >
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Monitorar Processo</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              {convertPubMonitorPublicacao && (
-                <div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
-                  <p className="text-sm text-violet-900">
-                    <span className="font-semibold">Processo:</span> {convertPubMonitorPublicacao.processo || '-'}
-                  </p>
-                  <p className="text-xs text-violet-700">
-                    <span className="font-semibold">Parte:</span> {convertPubMonitorPublicacao.parte || '-'}
-                  </p>
-                  <p className="text-xs text-violet-700">
-                    <span className="font-semibold">Row:</span> {convertPubMonitorPublicacao.rowNumber ?? '-'}
-                  </p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Número do processo *</Label>
-                  <Input
-                    value={convertPubMonitorForm.numero_processo}
-                    onChange={(e) =>
-                      setConvertPubMonitorForm({
-                        ...convertPubMonitorForm,
-                        numero_processo: e.target.value,
-                      })
-                    }
-                    placeholder="Ex: 1000664-12.2022.8.26.0691"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Cliente / Parte *</Label>
-                  <Input
-                    value={convertPubMonitorForm.cliente_parte}
-                    onChange={(e) =>
-                      setConvertPubMonitorForm({
-                        ...convertPubMonitorForm,
-                        cliente_parte: e.target.value,
-                      })
-                    }
-                    placeholder="Nome do cliente ou parte"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Responsável *</Label>
-                  <Select
-                    value={convertPubMonitorForm.responsavel_id}
-                    onValueChange={(value) =>
-                      setConvertPubMonitorForm({
-                        ...convertPubMonitorForm,
-                        responsavel_id: value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o responsável..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pessoas.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Tribunal / Órgão atual *</Label>
-                  <Select
-                    value={convertPubMonitorForm.tribunal_orgao_atual}
-                    onValueChange={(value) =>
-                      setConvertPubMonitorForm({
-                        ...convertPubMonitorForm,
-                        tribunal_orgao_atual: value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1º Grau">1º Grau</SelectItem>
-                      <SelectItem value="2º Grau (TJ/TRF)">2º Grau (TJ/TRF)</SelectItem>
-                      <SelectItem value="STJ">STJ</SelectItem>
-                      <SelectItem value="STF">STF</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Tipo de controle *</Label>
-                <Select
-                  value={convertPubMonitorForm.tipo_controle}
-                  onValueChange={(value) =>
-                    setConvertPubMonitorForm({
-                      ...convertPubMonitorForm,
-                      tipo_controle: value,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Apenas acompanhamento">Apenas acompanhamento</SelectItem>
-                    <SelectItem value="Aguardando decisão">Aguardando decisão</SelectItem>
-                    <SelectItem value="Em fase de recurso">Em fase de recurso</SelectItem>
-                    <SelectItem value="Recurso interposto">Recurso interposto</SelectItem>
-                    <SelectItem value="Aguardando julgamento">Aguardando julgamento</SelectItem>
-                    <SelectItem value="Decisão publicada (analisar)">Decisão publicada (analisar)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>O que precisa ser feito *</Label>
-                <Input
-                  value={convertPubMonitorForm.o_que_precisa_ser_feito}
-                  onChange={(e) =>
-                    setConvertPubMonitorForm({
-                      ...convertPubMonitorForm,
-                      o_que_precisa_ser_feito: e.target.value,
-                    })
-                  }
-                  placeholder="Ex: Checar andamento no e-SAJ"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Próxima checagem *</Label>
-                <Input
-                  type="date"
-                  value={convertPubMonitorForm.proxima_checagem}
-                  onChange={(e) =>
-                    setConvertPubMonitorForm({
-                      ...convertPubMonitorForm,
-                      proxima_checagem: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea
-                  value={convertPubMonitorForm.observacoes}
-                  onChange={(e) =>
-                    setConvertPubMonitorForm({
-                      ...convertPubMonitorForm,
-                      observacoes: e.target.value,
-                    })
-                  }
-                  rows={5}
-                  placeholder="Observações adicionais..."
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={closeConvertPublicacaoMonitorDialog}>
-                  Cancelar
-                </Button>
-
-                <Button
-                  type="button"
-                  className="bg-violet-700 hover:bg-violet-800"
-                  disabled={converterPublicacaoEmMonitoramentoMutation.isPending}
-                  onClick={() => {
-                    if (!convertPubMonitorPublicacao) return;
-                    if (!publicacaoConvertWebhookUrl) {
-                      alert('Configure o webhook POST /publicacoes/convertido.');
-                      return;
-                    }
-
-                    converterPublicacaoEmMonitoramentoMutation.mutate({
-                      row: convertPubMonitorPublicacao,
-                      monitorData: convertPubMonitorForm,
-                    });
-                  }}
-                >
-                  {converterPublicacaoEmMonitoramentoMutation.isPending
-                    ? 'Criando...'
-                    : 'Criar Monitoramento'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog
-          open={isFazerAgendamentoDialogOpen}
-          onOpenChange={(open) => {
-            if (!open) closeFazerAgendamentoDialog();
-            else setIsFazerAgendamentoDialogOpen(true);
-          }}
-        >
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Fazer Agendamento</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              {agendamentoPublicacao && (
-                <div className="rounded-xl border border-pink-200 bg-pink-50 p-3">
-                  <p className="text-sm text-pink-900">
-                    <span className="font-semibold">Processo:</span> {agendamentoPublicacao.processo || '-'}
-                  </p>
-                  <p className="text-xs text-pink-700">
-                    <span className="font-semibold">Parte:</span> {agendamentoPublicacao.parte || '-'}
-                  </p>
-                  <p className="text-xs text-pink-700">
-                    <span className="font-semibold">Row:</span> {agendamentoPublicacao.rowNumber ?? '-'}
-                  </p>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Tipo de Agendamento *</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant={agendamentoForm.tipo_agendamento === 'audiencia' ? 'default' : 'outline'}
-                    className={
-                      agendamentoForm.tipo_agendamento === 'audiencia'
-                        ? 'bg-pink-600 hover:bg-pink-700'
-                        : ''
-                    }
-                    onClick={() =>
-                      setAgendamentoForm((prev) => {
-                        const currentBase = prev.titulo.includes(' — ')
-                          ? prev.titulo.split(' — ').slice(1).join(' — ')
-                          : buildTituloFromPublicacao(agendamentoPublicacao || {});
-                        return {
-                          ...prev,
-                          tipo_agendamento: 'audiencia',
-                          titulo: `Audiência — ${currentBase}`.slice(0, 180),
-                          observacoes:
-                            String(prev.observacoes || '')
-                              .replace('[AGENDAMENTO_PUBLICACAO:PERICIA]', '')
-                              .replace('[AGENDAMENTO_PUBLICACAO:AUDIENCIA]', '')
-                              .trim() + ' [AGENDAMENTO_PUBLICACAO:AUDIENCIA]',
-                        };
-                      })
-                    }
-                  >
-                    Audiência
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant={agendamentoForm.tipo_agendamento === 'pericia' ? 'default' : 'outline'}
-                    className={
-                      agendamentoForm.tipo_agendamento === 'pericia'
-                        ? 'bg-orange-500 hover:bg-orange-600'
-                        : ''
-                    }
-                    onClick={() =>
-                      setAgendamentoForm((prev) => {
-                        const currentBase = prev.titulo.includes(' — ')
-                          ? prev.titulo.split(' — ').slice(1).join(' — ')
-                          : buildTituloFromPublicacao(agendamentoPublicacao || {});
-                        return {
-                          ...prev,
-                          tipo_agendamento: 'pericia',
-                          titulo: `Perícia — ${currentBase}`.slice(0, 180),
-                          observacoes:
-                            String(prev.observacoes || '')
-                              .replace('[AGENDAMENTO_PUBLICACAO:PERICIA]', '')
-                              .replace('[AGENDAMENTO_PUBLICACAO:AUDIENCIA]', '')
-                              .trim() + ' [AGENDAMENTO_PUBLICACAO:PERICIA]',
-                        };
-                      })
-                    }
-                  >
-                    Perícia
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Título *</Label>
-                <Input
-                  value={agendamentoForm.titulo}
-                  onChange={(e) =>
-                    setAgendamentoForm({
-                      ...agendamentoForm,
-                      titulo: e.target.value,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Data *</Label>
-                  <Input
-                    type="date"
-                    value={agendamentoForm.data_evento}
-                    onChange={(e) =>
-                      setAgendamentoForm({
-                        ...agendamentoForm,
-                        data_evento: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Responsável *</Label>
-                  <Select
-                    value={agendamentoForm.responsavel_id}
-                    onValueChange={(value) =>
-                      setAgendamentoForm({
-                        ...agendamentoForm,
-                        responsavel_id: value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o responsável..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pessoas.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.nome}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Hora de Início *</Label>
-                  <Input
-                    type="time"
-                    value={agendamentoForm.hora_inicio}
-                    onChange={(e) =>
-                      setAgendamentoForm({
-                        ...agendamentoForm,
-                        hora_inicio: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Hora de Término</Label>
-                  <Input
-                    type="time"
-                    value={agendamentoForm.hora_termino}
-                    onChange={(e) =>
-                      setAgendamentoForm({
-                        ...agendamentoForm,
-                        hora_termino: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  value={agendamentoForm.descricao}
-                  onChange={(e) =>
-                    setAgendamentoForm({
-                      ...agendamentoForm,
-                      descricao: e.target.value,
-                    })
-                  }
-                  rows={5}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea
-                  value={agendamentoForm.observacoes}
-                  onChange={(e) =>
-                    setAgendamentoForm({
-                      ...agendamentoForm,
-                      observacoes: e.target.value,
-                    })
-                  }
-                  rows={3}
-                />
-                <p className="text-xs text-slate-500">
-                  Audiências ficam em rosa no calendário. Perícias ficam em laranja.
-                </p>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={closeFazerAgendamentoDialog}>
-                  Cancelar
-                </Button>
-
-                <Button
-                  type="button"
-                  className="bg-slate-900 hover:bg-slate-800"
-                  disabled={fazerAgendamentoMutation.isPending}
-                  onClick={() => {
-                    if (!agendamentoPublicacao) return;
-                    if (!agendamentoForm.titulo?.trim()) {
-                      alert('O título é obrigatório.');
-                      return;
-                    }
-                    if (!agendamentoForm.data_evento) {
-                      alert('A data é obrigatória.');
-                      return;
-                    }
-                    if (!agendamentoForm.hora_inicio) {
-                      alert('A hora de início é obrigatória.');
-                      return;
-                    }
-                    if (!agendamentoForm.responsavel_id) {
-                      alert('Selecione o responsável.');
-                      return;
-                    }
-                    if (!publicacaoConvertWebhookUrl) {
-                      alert('Configure o webhook POST /publicacoes/convertido.');
-                      return;
-                    }
-
-                    fazerAgendamentoMutation.mutate({
-                      row: agendamentoPublicacao,
-                      agendamentoData: agendamentoForm,
-                    });
-                  }}
-                >
-                  {fazerAgendamentoMutation.isPending ? 'Criando...' : 'Criar Agendamento'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        />
       </div>
     </div>
   );

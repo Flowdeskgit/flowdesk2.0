@@ -1,6 +1,6 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Printer, Save, Clock, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -75,7 +75,7 @@ function TimeInput({ value, onChange }) {
       type="time"
       value={value || ''}
       onChange={e => onChange(e.target.value)}
-      className="w-full border-0 bg-transparent text-center text-xs font-mono focus:outline-none focus:ring-1 focus:ring-rose-400 rounded px-0.5"
+      className="w-full border-0 bg-transparent text-center text-xs font-mono focus:outline-none focus:ring-1 focus:ring-[#378ADD] rounded px-0.5"
     />
   );
 }
@@ -91,7 +91,7 @@ export default function FolhaDePonto() {
 
   const { data: currentUser } = useQuery({
     queryKey: ['current-user'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => flowdesk.auth.me(),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -100,13 +100,13 @@ export default function FolhaDePonto() {
 
   const { data: allUsers = [] } = useQuery({
     queryKey: ['users-list'],
-    queryFn: () => base44.entities.User.list(),
+    queryFn: () => flowdesk.entities.User.list(),
     enabled: admin,
   });
 
   const { data: folha, isLoading } = useQuery({
     queryKey: ['folha-ponto', userId, mes, ano],
-    queryFn: () => base44.entities.FolhaDePonto.filter({ usuario_id: userId, mes, ano }, '-created_date', 1),
+    queryFn: () => flowdesk.entities.FolhaDePonto.filter({ usuario_id: userId, mes, ano }, '-created_date', 1),
     enabled: !!userId,
     select: (data) => data[0] || null,
   });
@@ -142,9 +142,9 @@ export default function FolhaDePonto() {
         registros,
       };
       if (folha?.id) {
-        return base44.entities.FolhaDePonto.update(folha.id, payload);
+        return flowdesk.entities.FolhaDePonto.update(folha.id, payload);
       } else {
-        return base44.entities.FolhaDePonto.create(payload);
+        return flowdesk.entities.FolhaDePonto.create(payload);
       }
     },
     onSuccess: () => {
@@ -170,19 +170,25 @@ export default function FolhaDePonto() {
     <div className="min-h-screen bg-slate-50 p-4 lg:p-8">
       <style dangerouslySetInnerHTML={{ __html: PRINT_STYLE }} />
 
-      {/* Controles — ocultos na impressão via id */}
+      {/* Controles */}
       <div id="folha-controls" className="mb-6 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-              <Clock className="h-6 w-6 text-rose-500" /> Folha de Ponto
+              <Clock className="h-6 w-6 text-[#378ADD]" /> Folha de Ponto
             </h1>
             <p className="text-sm text-slate-500 mt-0.5">Registro mensal de jornada</p>
           </div>
           <div className="flex gap-2">
             {isDirty && (
-              <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} className="bg-rose-600 hover:bg-rose-700 text-white">
-                {saveMutation.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+              <Button
+                onClick={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending}
+                className="bg-[#378ADD] hover:bg-[#185FA5] text-white"
+              >
+                {saveMutation.isPending
+                  ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  : <Save className="mr-1.5 h-4 w-4" />}
                 Salvar
               </Button>
             )}
@@ -194,34 +200,52 @@ export default function FolhaDePonto() {
 
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl overflow-hidden">
-            <button onClick={prevMes} className="px-3 py-2 hover:bg-slate-50 transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-            <span className="px-3 py-2 text-sm font-semibold text-slate-700 min-w-[120px] text-center">{MESES[mes - 1]} {ano}</span>
-            <button onClick={nextMes} className="px-3 py-2 hover:bg-slate-50 transition-colors"><ChevronRight className="h-4 w-4" /></button>
+            <button onClick={prevMes} className="px-3 py-2 hover:bg-slate-50 transition-colors">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="px-3 py-2 text-sm font-semibold text-slate-700 min-w-[120px] text-center">
+              {MESES[mes - 1]} {ano}
+            </span>
+            <button onClick={nextMes} className="px-3 py-2 hover:bg-slate-50 transition-colors">
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
 
           <Select value={String(mes)} onValueChange={v => handleMesAno(Number(v), ano)}>
             <SelectTrigger className="w-36 bg-white"><SelectValue /></SelectTrigger>
-            <SelectContent>{MESES.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}</SelectContent>
+            <SelectContent>
+              {MESES.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
+            </SelectContent>
           </Select>
+
           <Select value={String(ano)} onValueChange={v => handleMesAno(mes, Number(v))}>
             <SelectTrigger className="w-24 bg-white"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {[2023, 2024, 2025, 2026, 2027].map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+              {[2023, 2024, 2025, 2026, 2027].map(y => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
           {admin && allUsers.length > 0 && (
-            <Select value={selectedUserId || currentUser?.email || ''} onValueChange={v => { setSelectedUserId(v); setLocalRegistros(null); }}>
-              <SelectTrigger className="w-52 bg-white"><SelectValue placeholder="Selecionar colaborador" /></SelectTrigger>
+            <Select
+              value={selectedUserId || currentUser?.email || ''}
+              onValueChange={v => { setSelectedUserId(v); setLocalRegistros(null); }}
+            >
+              <SelectTrigger className="w-52 bg-white">
+                <SelectValue placeholder="Selecionar colaborador" />
+              </SelectTrigger>
               <SelectContent>
-                {allUsers.map(u => <SelectItem key={u.email} value={u.email}>{u.full_name || u.email}</SelectItem>)}
+                {allUsers.map(u => (
+                  <SelectItem key={u.email} value={u.email}>{u.full_name || u.email}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
         </div>
       </div>
 
-      {/* FOLHA — aparece na tela e na impressão */}
+      {/* Folha */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 max-w-5xl mx-auto">
 
         {/* Cabeçalho do empregador */}
@@ -238,14 +262,22 @@ export default function FolhaDePonto() {
             Folha de Ponto — {MESES[mes - 1]} / {ano}
           </h2>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div><span className="text-slate-500 text-xs font-medium uppercase">Colaborador:</span> <span className="font-semibold text-slate-800">{nomeUsuario}</span></div>
-            <div><span className="text-slate-500 text-xs font-medium uppercase">Período:</span> <span className="font-semibold text-slate-800">{MESES[mes - 1]} de {ano}</span></div>
+            <div>
+              <span className="text-slate-500 text-xs font-medium uppercase">Colaborador:</span>{' '}
+              <span className="font-semibold text-slate-800">{nomeUsuario}</span>
+            </div>
+            <div>
+              <span className="text-slate-500 text-xs font-medium uppercase">Período:</span>{' '}
+              <span className="font-semibold text-slate-800">{MESES[mes - 1]} de {ano}</span>
+            </div>
           </div>
         </div>
 
         {/* Tabela */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-rose-400" /></div>
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-[#378ADD]" />
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-collapse">
@@ -272,50 +304,44 @@ export default function FolhaDePonto() {
                   const incompleto = !isWeekend && (row.entrada || row.saida) && (!row.entrada || !row.saida);
 
                   const rowClass = isWeekend
-                    ? 'bg-slate-100 text-slate-400'
+                    ? (idx % 2 === 0 ? 'bg-white text-slate-700' : 'bg-slate-50 text-slate-700')
                     : incompleto
                     ? 'bg-amber-50'
                     : idx % 2 === 0 ? 'bg-white' : 'bg-slate-50';
 
                   return (
                     <tr key={row.dia} className={rowClass}>
-                      <td className="border border-slate-200 px-2 py-1 text-center font-bold text-slate-700">{row.dia}</td>
-                      <td className={`border border-slate-200 px-2 py-1 text-center font-semibold ${isDomingo ? 'text-red-500' : isSabado ? 'text-blue-500' : 'text-slate-600'}`}>
+                      <td className="border border-slate-200 px-2 py-1 text-center font-bold text-slate-700">
+                        {row.dia}
+                      </td>
+                      <td className={`border border-slate-200 px-2 py-1 text-center font-semibold ${
+                        isDomingo ? 'text-red-500' : isSabado ? 'text-blue-500' : 'text-slate-600'
+                      }`}>
                         {DIAS_SEMANA[diaSemana]}
                       </td>
                       <td className="border border-slate-200 p-0.5">
-                        {isWeekend ? <span className="block text-center text-slate-300">—</span> : (
-                          <TimeInput value={row.entrada} onChange={v => updateRow(idx, 'entrada', v)} />
-                        )}
+                        <TimeInput value={row.entrada} onChange={v => updateRow(idx, 'entrada', v)} />
                       </td>
                       <td className="border border-slate-200 p-0.5">
-                        {isWeekend ? <span className="block text-center text-slate-300">—</span> : (
-                          <TimeInput value={row.intervalo_saida} onChange={v => updateRow(idx, 'intervalo_saida', v)} />
-                        )}
+                        <TimeInput value={row.intervalo_saida} onChange={v => updateRow(idx, 'intervalo_saida', v)} />
                       </td>
                       <td className="border border-slate-200 p-0.5">
-                        {isWeekend ? <span className="block text-center text-slate-300">—</span> : (
-                          <TimeInput value={row.intervalo_retorno} onChange={v => updateRow(idx, 'intervalo_retorno', v)} />
-                        )}
+                        <TimeInput value={row.intervalo_retorno} onChange={v => updateRow(idx, 'intervalo_retorno', v)} />
                       </td>
                       <td className="border border-slate-200 p-0.5">
-                        {isWeekend ? <span className="block text-center text-slate-300">—</span> : (
-                          <TimeInput value={row.saida} onChange={v => updateRow(idx, 'saida', v)} />
-                        )}
+                        <TimeInput value={row.saida} onChange={v => updateRow(idx, 'saida', v)} />
                       </td>
                       <td className="border border-slate-200 px-1 py-1 text-center font-mono text-slate-600">
                         {horas || <span className="text-slate-300">—</span>}
                       </td>
                       <td className="border border-slate-200 p-0.5">
-                        {isWeekend ? null : (
-                          <input
-                            type="text"
-                            value={row.observacoes || ''}
-                            onChange={e => updateRow(idx, 'observacoes', e.target.value)}
-                            placeholder="..."
-                            className="w-full border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-rose-400 rounded px-1"
-                          />
-                        )}
+                        <input
+                          type="text"
+                          value={row.observacoes || ''}
+                          onChange={e => updateRow(idx, 'observacoes', e.target.value)}
+                          placeholder="..."
+                          className="w-full border-0 bg-transparent text-xs focus:outline-none focus:ring-1 focus:ring-[#378ADD] rounded px-1"
+                        />
                       </td>
                     </tr>
                   );
@@ -325,7 +351,7 @@ export default function FolhaDePonto() {
           </div>
         )}
 
-        {/* Rodapé com assinatura */}
+        {/* Rodapé */}
         <div className="px-6 py-6 border-t border-slate-200 mt-2">
           <div className="flex flex-col sm:flex-row justify-between gap-6 items-end">
             <div className="text-xs text-slate-400 space-y-1">

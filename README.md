@@ -1,39 +1,42 @@
-**Welcome to your Base44 project** 
+# Flowdesk ADV
 
-**About**
+Flowdesk ADV is the Netlify/Supabase version of the MCR Advocacia operations app.
 
-View and Edit  your app on [Base44.com](http://Base44.com) 
+## Local Setup
 
-This project contains everything you need to run your app locally.
+1. Install dependencies:
 
-**Edit the code in your local development environment**
+   ```bash
+   npm install
+   ```
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+2. Create `.env.local` from `.env.example` and fill in the Supabase client values.
 
-**Prerequisites:** 
+3. Run the app:
 
-1. Clone the repository using the project's Git URL 
-2. Navigate to the project directory
-3. Install dependencies: `npm install`
-4. Create an `.env.local` file and set the right environment variables
+   ```bash
+   npm run dev
+   ```
 
+## Netlify Environment
+
+Client-side variables:
+
+```bash
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
 ```
-VITE_BASE44_APP_ID=your_app_id
-VITE_BASE44_APP_BASE_URL=your_backend_url
 
-e.g.
-VITE_BASE44_APP_ID=cbef744a8545c389ef439ea6
-VITE_BASE44_APP_BASE_URL=https://my-to-do-list-81bfaad7.base44.app
+Server-only variables for Netlify Functions:
+
+```bash
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-Run the app: `npm run dev`
+Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
 
-**Publish your changes**
+## Database
 
-Open [Base44.com](http://Base44.com) and click on Publish.
-
-**Docs & Support**
-
-Documentation: [https://docs.base44.com/Integrations/Using-GitHub](https://docs.base44.com/Integrations/Using-GitHub)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+Apply the SQL in `supabase/migrations/001_flowdesk_adv_schema.sql` to create profiles, JSONB entity tables, row-level security policies, and the `uploads` storage bucket.

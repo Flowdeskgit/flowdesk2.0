@@ -1,0 +1,52 @@
+{
+  "name": "FolhaDePonto",
+  "type": "object",
+  "properties": {
+    "usuario_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio (email)"
+    },
+    "usuario_nome": {
+      "type": "string"
+    },
+    "mes": {
+      "type": "number",
+      "description": "M\u00eas (1-12)"
+    },
+    "ano": {
+      "type": "number"
+    },
+    "registros": {
+      "type": "array",
+      "description": "Array com 31 objetos (um por dia)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "dia": {
+            "type": "number"
+          },
+          "entrada": {
+            "type": "string"
+          },
+          "intervalo_saida": {
+            "type": "string"
+          },
+          "intervalo_retorno": {
+            "type": "string"
+          },
+          "saida": {
+            "type": "string"
+          },
+          "observacoes": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "usuario_id",
+    "mes",
+    "ano"
+  ]
+}

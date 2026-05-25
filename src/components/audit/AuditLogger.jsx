@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 
 /**
  * Sistema de log de auditoria automático
@@ -7,7 +7,7 @@ import { base44 } from '@/api/base44Client';
 export const AuditLogger = {
   async log(params) {
     try {
-      const user = await base44.auth.me().catch(() => null);
+      const user = await flowdesk.auth.me().catch(() => null);
       
       const auditData = {
         usuario_id: user?.id || 'sistema',
@@ -22,7 +22,7 @@ export const AuditLogger = {
         ip_origem: null // Seria obtido do backend em produção
       };
 
-      await base44.entities.Auditoria.create(auditData);
+      await flowdesk.entities.Auditoria.create(auditData);
     } catch (error) {
       console.error('Erro ao registrar auditoria:', error);
       // Não propagar o erro para não interromper a operação principal

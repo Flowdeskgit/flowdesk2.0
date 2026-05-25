@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +25,7 @@ export default function AbaCredenciais({ processoId, centralId, user }) {
 
   const { data: credencial } = useQuery({
     queryKey: ['credencial-inss', processoId],
-    queryFn: () => base44.entities.CredencialINSS.filter({ processo_id: processoId }),
+    queryFn: () => flowdesk.entities.CredencialINSS.filter({ processo_id: processoId }),
     select: (data) => data?.[0],
   });
 
@@ -37,8 +37,8 @@ export default function AbaCredenciais({ processoId, centralId, user }) {
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const payload = { ...data, processo_id: processoId, central_id: centralId, atualizado_por: user?.email || '' };
-      if (credencial) return base44.entities.CredencialINSS.update(credencial.id, payload);
-      return base44.entities.CredencialINSS.create({ ...payload, criado_por: user?.email || '' });
+      if (credencial) return flowdesk.entities.CredencialINSS.update(credencial.id, payload);
+      return flowdesk.entities.CredencialINSS.create({ ...payload, criado_por: user?.email || '' });
     },
     onSuccess: () => { qc.invalidateQueries(['credencial-inss', processoId]); setEditing(false); },
   });

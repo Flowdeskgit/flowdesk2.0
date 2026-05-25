@@ -1,41 +1,53 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { flowdesk } from '@/api/flowdeskClient';
 
-const STORAGE_KEY_MODE  = 'flowdesk-theme-mode';
+const STORAGE_KEY_MODE = 'flowdesk-theme-mode';
 const STORAGE_KEY_COLOR = 'flowdesk-theme-color';
 
 const ThemeContext = createContext(null);
 
-export function ThemeProvider({ children }) {
-  // Read initial values from localStorage synchronously (no flash)
-  const [tema_cor,       setTemaCor]       = useState(() => localStorage.getItem(STORAGE_KEY_COLOR) || 'rose');
-  const [modo_exibicao,  setModoExibicao]  = useState(() => localStorage.getItem(STORAGE_KEY_MODE)  || 'claro');
+const getStoredValue = (key, fallback) => {
+  try {
+    return localStorage.getItem(key) || fallback;
+  } catch {
+    return fallback;
+  }
+};
 
-  // Apply / remove the `dark` class on <html> whenever mode changes
+export function ThemeProvider({ children }) {
+  const [tema_cor, setTemaCor] = useState(() => getStoredValue(STORAGE_KEY_COLOR, 'azul'));
+  const [modo_exibicao, setModoExibicao] = useState(() => getStoredValue(STORAGE_KEY_MODE, 'claro'));
+
   useEffect(() => {
-    const root       = document.documentElement;
+    const root = document.documentElement;
     const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const isDark     = modo_exibicao === 'escuro' || (modo_exibicao === 'automatico' && systemDark);
+    const isDark = modo_exibicao === 'escuro' || (modo_exibicao === 'automatico' && systemDark);
     root.classList.toggle('dark', isDark);
   }, [modo_exibicao]);
 
-  // Keep the `dark` class in sync when system preference changes (auto mode)
   useEffect(() => {
     if (modo_exibicao !== 'automatico') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = (e) => document.documentElement.classList.toggle('dark', e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (event) => document.documentElement.classList.toggle('dark', event.matches);
+    media.addEventListener('change', handler);
+    return () => media.removeEventListener('change', handler);
   }, [modo_exibicao]);
 
   const savePreferences = (newTema, newModo) => {
-    const t = newTema ?? tema_cor;
-    const m = newModo ?? modo_exibicao;
-    setTemaCor(t);
-    setModoExibicao(m);
+    const nextTema = newTema ?? tema_cor;
+    const nextModo = newModo ?? modo_exibicao;
+
+    setTemaCor(nextTema);
+    setModoExibicao(nextModo);
+
     try {
-      localStorage.setItem(STORAGE_KEY_COLOR, t);
-      localStorage.setItem(STORAGE_KEY_MODE,  m);
-    } catch (e) { /* private browsing — ignore */ }
+      localStorage.setItem(STORAGE_KEY_COLOR, nextTema);
+      localStorage.setItem(STORAGE_KEY_MODE, nextModo);
+    } catch {
+      // Storage can be unavailable in private browsing; the in-memory state still works.
+    }
+
+    flowdesk.auth.updateMe({ tema_cor: nextTema, modo_exibicao: nextModo }).catch(() => {});
   };
 
   return (

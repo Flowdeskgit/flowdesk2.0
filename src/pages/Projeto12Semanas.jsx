@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { format, parseISO, differenceInWeeks, addWeeks, startOfWeek } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { flowdesk } from '@/api/flowdeskClient';
+import { format, parseISO } from 'date-fns';
 import {
   Plus,
   Target,
-  TrendingUp,
   TrendingDown,
   CheckCircle2,
   AlertTriangle,
@@ -14,12 +12,6 @@ import {
   Users,
   BarChart3,
   Download,
-  Edit,
-  Trash2,
-  Eye,
-  ArrowRight,
-  PlayCircle,
-  PauseCircle,
   Flag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -102,13 +94,13 @@ export default function Projeto12Semanas() {
 
   const { data: ciclos = [] } = useQuery({
     queryKey: ['ciclos-12-semanas'],
-    queryFn: () => base44.entities.Ciclo12Semanas.list('-created_date'),
+    queryFn: () => flowdesk.entities.Ciclo12Semanas.list('-created_date'),
   });
 
   const { data: indicadores = [] } = useQuery({
     queryKey: ['indicadores-12-semanas', cicloSelecionado?.id],
     queryFn: () => cicloSelecionado 
-      ? base44.entities.Indicador12Semanas.filter({ ciclo_id: cicloSelecionado.id })
+      ? flowdesk.entities.Indicador12Semanas.filter({ ciclo_id: cicloSelecionado.id })
       : Promise.resolve([]),
     enabled: !!cicloSelecionado,
   });
@@ -116,7 +108,7 @@ export default function Projeto12Semanas() {
   const { data: acoes = [] } = useQuery({
     queryKey: ['acoes-12-semanas', cicloSelecionado?.id],
     queryFn: () => cicloSelecionado
-      ? base44.entities.AcaoCorretiva12Semanas.filter({ ciclo_id: cicloSelecionado.id })
+      ? flowdesk.entities.AcaoCorretiva12Semanas.filter({ ciclo_id: cicloSelecionado.id })
       : Promise.resolve([]),
     enabled: !!cicloSelecionado,
   });
@@ -124,43 +116,43 @@ export default function Projeto12Semanas() {
   const { data: revisoes = [] } = useQuery({
     queryKey: ['revisoes-12-semanas', cicloSelecionado?.id],
     queryFn: () => cicloSelecionado
-      ? base44.entities.RevisaoEstrategica12Semanas.filter({ ciclo_id: cicloSelecionado.id })
+      ? flowdesk.entities.RevisaoEstrategica12Semanas.filter({ ciclo_id: cicloSelecionado.id })
       : Promise.resolve([]),
     enabled: !!cicloSelecionado,
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   // Buscar dados de outros módulos para alimentar indicadores automáticos
   const { data: atendimentos = [] } = useQuery({
     queryKey: ['atendimentos'],
-    queryFn: () => base44.entities.Atendimento.list(),
+    queryFn: () => flowdesk.entities.Atendimento.list(),
   });
 
   const { data: tarefas = [] } = useQuery({
     queryKey: ['tarefas'],
-    queryFn: () => base44.entities.Tarefa.list(),
+    queryFn: () => flowdesk.entities.Tarefa.list(),
   });
 
   const { data: eventos = [] } = useQuery({
     queryKey: ['agenda'],
-    queryFn: () => base44.entities.Agenda.list(),
+    queryFn: () => flowdesk.entities.Agenda.list(),
   });
 
   const { data: metas = [] } = useQuery({
     queryKey: ['metas-ciclo', cicloSelecionado?.id],
     queryFn: () => cicloSelecionado
-      ? base44.entities.MetaCiclo12Semanas.filter({ ciclo_id: cicloSelecionado.id })
+      ? flowdesk.entities.MetaCiclo12Semanas.filter({ ciclo_id: cicloSelecionado.id })
       : Promise.resolve([]),
     enabled: !!cicloSelecionado,
   });
 
   // Mutations
   const createCicloMutation = useMutation({
-    mutationFn: (data) => base44.entities.Ciclo12Semanas.create(data),
+    mutationFn: (data) => flowdesk.entities.Ciclo12Semanas.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ciclos-12-semanas'] });
       setDialogCiclo(false);
@@ -169,7 +161,7 @@ export default function Projeto12Semanas() {
   });
 
   const updateCicloMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Ciclo12Semanas.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.Ciclo12Semanas.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ciclos-12-semanas'] });
       setDialogCiclo(false);
@@ -178,7 +170,7 @@ export default function Projeto12Semanas() {
   });
 
   const createIndicadorMutation = useMutation({
-    mutationFn: (data) => base44.entities.Indicador12Semanas.create(data),
+    mutationFn: (data) => flowdesk.entities.Indicador12Semanas.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['indicadores-12-semanas'] });
       setDialogIndicador(false);
@@ -187,7 +179,7 @@ export default function Projeto12Semanas() {
   });
 
   const updateIndicadorMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Indicador12Semanas.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.Indicador12Semanas.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['indicadores-12-semanas'] });
       setDialogIndicador(false);
@@ -196,7 +188,7 @@ export default function Projeto12Semanas() {
   });
 
   const createAcaoMutation = useMutation({
-    mutationFn: (data) => base44.entities.AcaoCorretiva12Semanas.create(data),
+    mutationFn: (data) => flowdesk.entities.AcaoCorretiva12Semanas.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['acoes-12-semanas'] });
       setDialogAcao(false);
@@ -205,7 +197,7 @@ export default function Projeto12Semanas() {
   });
 
   const createRevisaoMutation = useMutation({
-    mutationFn: (data) => base44.entities.RevisaoEstrategica12Semanas.create(data),
+    mutationFn: (data) => flowdesk.entities.RevisaoEstrategica12Semanas.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['revisoes-12-semanas'] });
       setDialogRevisao(false);
@@ -214,7 +206,7 @@ export default function Projeto12Semanas() {
   });
 
   const createFeedbackMutation = useMutation({
-    mutationFn: (data) => base44.entities.Feedback12Semanas.create(data),
+    mutationFn: (data) => flowdesk.entities.Feedback12Semanas.create(data),
     onSuccess: () => {
       setDialogFeedback(false);
       resetFormFeedback();
@@ -254,7 +246,7 @@ export default function Projeto12Semanas() {
           else if (percentual < 70) status_indicador = 'Fora da meta';
 
           if (resultado !== ind.resultado_atual || percentual !== ind.percentual_atingimento) {
-            await base44.entities.Indicador12Semanas.update(ind.id, {
+            await flowdesk.entities.Indicador12Semanas.update(ind.id, {
               ...ind,
               resultado_atual: resultado,
               percentual_atingimento: Math.round(percentual),
@@ -394,7 +386,7 @@ export default function Projeto12Semanas() {
     if (!cicloSelecionado) return;
 
     const { jsPDF } = await import('jspdf');
-    await import('jspdf-autotable');
+    const { default: autoTable } = await import('jspdf-autotable');
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
@@ -454,7 +446,7 @@ export default function Projeto12Semanas() {
       ind.status_indicador
     ]);
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: yPos,
       head: [['Setor', 'Indicador', 'Meta', 'Resultado', '%', 'Status']],
       body: tableData,
@@ -479,7 +471,7 @@ export default function Projeto12Semanas() {
         acao.status_acao
       ]);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [['Ação', 'Responsável', 'Prazo', 'Status']],
         body: acoesData,

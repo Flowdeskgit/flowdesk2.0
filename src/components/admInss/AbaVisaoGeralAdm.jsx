@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,7 +36,7 @@ export default function AbaVisaoGeralAdm({ adm, user }) {
   const [form, setForm] = useState({});
 
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.AdministrativoINSS.update(adm.id, { ...data, atualizado_por: user?.email || '' }),
+    mutationFn: (data) => flowdesk.entities.AdministrativoINSS.update(adm.id, { ...data, atualizado_por: user?.email || '' }),
     onSuccess: () => {
       queryClient.invalidateQueries(['adm-inss', adm.id]);
       setEditing(false);

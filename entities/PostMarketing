@@ -1,0 +1,79 @@
+{
+  "name": "PostMarketing",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo do post"
+    },
+    "legenda": {
+      "type": "string",
+      "description": "Legenda do post"
+    },
+    "midia": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "URLs das imagens/v\u00eddeos"
+    },
+    "rede_social": {
+      "type": "string",
+      "enum": [
+        "Instagram",
+        "Facebook",
+        "LinkedIn",
+        "TikTok",
+        "YouTube",
+        "WhatsApp",
+        "Todas"
+      ],
+      "default": "Instagram"
+    },
+    "tipo_conteudo": {
+      "type": "string",
+      "enum": [
+        "Carrossel",
+        "Reels",
+        "Stories",
+        "Feed",
+        "V\u00eddeo",
+        "Artigo"
+      ],
+      "default": "Feed"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags (BPC, Previdenci\u00e1rio, Fam\u00edlia, etc)"
+    },
+    "campanha": {
+      "type": "string",
+      "description": "Nome da campanha associada"
+    },
+    "data_publicacao": {
+      "type": "string",
+      "format": "date",
+      "description": "Data prevista/realizada de publica\u00e7\u00e3o"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Rascunho",
+        "Agendado",
+        "Publicado",
+        "Arquivado"
+      ],
+      "default": "Rascunho"
+    },
+    "observacoes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "titulo",
+    "legenda"
+  ]
+}

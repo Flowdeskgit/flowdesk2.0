@@ -13,10 +13,10 @@ const tipoIcons = {
 };
 
 const tipoColors = {
-  'Pendência': 'text-amber-600 bg-amber-100',
-  'Prazo': 'text-red-600 bg-red-100',
-  'Atualização': 'text-blue-600 bg-blue-100',
-  'Outro': 'text-slate-600 bg-slate-100',
+  'Pendência':   'text-amber-600 bg-amber-50',
+  'Prazo':       'text-destructive bg-destructive/10',
+  'Atualização': 'text-brand-electric bg-brand-electric/10',
+  'Outro':       'text-muted-foreground bg-muted',
 };
 
 export default function AlertsList({ alertas }) {
@@ -41,7 +41,7 @@ export default function AlertsList({ alertas }) {
           <p className="text-sm text-muted-foreground">Notificações e lembretes</p>
         </div>
         {alertasAtivos.length > 0 && (
-          <Badge className="bg-red-100 text-red-700 border-red-200">
+          <Badge className="bg-destructive/10 text-destructive border-0">
             {alertasAtivos.length}
           </Badge>
         )}

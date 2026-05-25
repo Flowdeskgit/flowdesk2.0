@@ -1,0 +1,53 @@
+{
+  "name": "ClubeDoLivro",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string"
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "Manual",
+        "Livro do M\u00eas",
+        "Material Complementar",
+        "Regra",
+        "Planejamento",
+        "Outro"
+      ],
+      "default": "Livro do M\u00eas"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "data": {
+      "type": "string",
+      "format": "date"
+    },
+    "link": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Ativo",
+        "Planejado",
+        "Conclu\u00eddo",
+        "Arquivado"
+      ],
+      "default": "Ativo"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "anexos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "titulo"
+  ]
+}

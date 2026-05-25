@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,20 +36,20 @@ export default function AbaAgendamentos({ processoId, centralId, user, onTarefaC
 
   const { data: agendamentos = [] } = useQuery({
     queryKey: ['agendamentos-inss', processoId],
-    queryFn: () => base44.entities.AgendamentoINSSAdmin.filter({ processo_id: processoId }),
+    queryFn: () => flowdesk.entities.AgendamentoINSSAdmin.filter({ processo_id: processoId }),
   });
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const payload = { ...data, processo_id: processoId, central_id: centralId, atualizado_por: user?.email || '' };
-      if (editing) return base44.entities.AgendamentoINSSAdmin.update(editing.id, payload);
-      return base44.entities.AgendamentoINSSAdmin.create({ ...payload, criado_por: user?.email || '' });
+      if (editing) return flowdesk.entities.AgendamentoINSSAdmin.update(editing.id, payload);
+      return flowdesk.entities.AgendamentoINSSAdmin.create({ ...payload, criado_por: user?.email || '' });
     },
     onSuccess: async (saved) => {
       qc.invalidateQueries(['agendamentos-inss', processoId]);
       // Auto-criar tarefa para agendamentos futuros
       if (!editing && form.data_agendada && new Date(form.data_agendada) >= new Date()) {
-        await base44.entities.TarefaINSS.create({
+        await flowdesk.entities.TarefaINSS.create({
           processo_id: processoId,
           central_id: centralId,
           titulo_tarefa: `Acompanhar agendamento: ${form.tipo_agendamento}`,
@@ -71,7 +71,7 @@ export default function AbaAgendamentos({ processoId, centralId, user, onTarefaC
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.AgendamentoINSSAdmin.delete(id),
+    mutationFn: (id) => flowdesk.entities.AgendamentoINSSAdmin.delete(id),
     onSuccess: () => qc.invalidateQueries(['agendamentos-inss', processoId]),
   });
 

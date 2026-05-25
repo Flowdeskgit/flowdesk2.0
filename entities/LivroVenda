@@ -1,0 +1,66 @@
+{
+  "name": "LivroVenda",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do livro/produto"
+    },
+    "formato": {
+      "type": "string",
+      "enum": [
+        "F\u00edsico",
+        "Digital",
+        "Outro"
+      ],
+      "default": "F\u00edsico"
+    },
+    "quantidade_estoque": {
+      "type": "number",
+      "default": 0
+    },
+    "quantidade_vendida": {
+      "type": "number",
+      "default": 0
+    },
+    "valor_unitario": {
+      "type": "number",
+      "default": 0
+    },
+    "plataforma": {
+      "type": "string"
+    },
+    "link_plataforma": {
+      "type": "string"
+    },
+    "lp_pagina_vendas": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Ativo",
+        "Em prepara\u00e7\u00e3o",
+        "Indispon\u00edvel",
+        "Esgotado"
+      ],
+      "default": "Ativo"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "anexos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "data_atualizacao": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "nome"
+  ]
+}
