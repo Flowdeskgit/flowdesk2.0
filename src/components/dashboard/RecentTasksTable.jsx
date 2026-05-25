@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
-import { format, parseISO, differenceInDays, isAfter, isBefore } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Clock, AlertTriangle, CheckCircle2, Circle, Play } from 'lucide-react';
 

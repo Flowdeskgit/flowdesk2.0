@@ -1,0 +1,40 @@
+{
+  "name": "HistoricoAtendimento",
+  "type": "object",
+  "properties": {
+    "atendimento_id": {
+      "type": "string",
+      "description": "ID do atendimento relacionado"
+    },
+    "data_hora": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "responsavel_id": {
+      "type": "string"
+    },
+    "tipo_acao": {
+      "type": "string",
+      "enum": [
+        "Cria\u00e7\u00e3o",
+        "Atualiza\u00e7\u00e3o",
+        "Delega\u00e7\u00e3o",
+        "Altera\u00e7\u00e3o de Status",
+        "Coment\u00e1rio",
+        "Anexo de Documento",
+        "Outro"
+      ],
+      "default": "Outro"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "alteracoes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "atendimento_id",
+    "tipo_acao"
+  ]
+}

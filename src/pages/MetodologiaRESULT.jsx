@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, BookOpen, Upload, FileText, Edit, Trash2, MoreVertical, Paperclip, X } from 'lucide-react';
+import { Plus, Search, BookOpen, FileText, Edit, Trash2, MoreVertical, Paperclip, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,11 +33,11 @@ export default function MetodologiaRESULT() {
 
   const { data: materiais = [], isLoading } = useQuery({
     queryKey: ['metodo-result'],
-    queryFn: () => base44.entities.MetodoRESULT.list(),
+    queryFn: () => flowdesk.entities.MetodoRESULT.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.MetodoRESULT.create(data),
+    mutationFn: (data) => flowdesk.entities.MetodoRESULT.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['metodo-result'] });
       closeDialog();
@@ -45,7 +45,7 @@ export default function MetodologiaRESULT() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.MetodoRESULT.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.MetodoRESULT.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['metodo-result'] });
       closeDialog();
@@ -53,7 +53,7 @@ export default function MetodologiaRESULT() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.MetodoRESULT.delete(id),
+    mutationFn: (id) => flowdesk.entities.MetodoRESULT.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['metodo-result'] });
     },
@@ -68,7 +68,7 @@ export default function MetodologiaRESULT() {
     
     for (const file of files) {
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const { file_url } = await flowdesk.integrations.Core.UploadFile({ file });
         uploadedUrls.push(file_url);
       } catch (error) {
         console.error('Erro ao fazer upload:', error);

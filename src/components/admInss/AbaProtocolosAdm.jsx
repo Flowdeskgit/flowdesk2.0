@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,22 +40,22 @@ export default function AbaProtocolosAdm({ admId }) {
 
   const { data: protocolos = [] } = useQuery({
     queryKey: ['prot-adm-inss', admId],
-    queryFn: () => base44.entities.ProtocoloAdmINSS.filter({ administrativo_inss_id: admId }),
+    queryFn: () => flowdesk.entities.ProtocoloAdmINSS.filter({ administrativo_inss_id: admId }),
     enabled: !!admId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ProtocoloAdmINSS.create({ ...data, administrativo_inss_id: admId }),
+    mutationFn: (data) => flowdesk.entities.ProtocoloAdmINSS.create({ ...data, administrativo_inss_id: admId }),
     onSuccess: () => { queryClient.invalidateQueries(['prot-adm-inss', admId]); setShowForm(false); setForm(EMPTY); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ProtocoloAdmINSS.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.ProtocoloAdmINSS.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries(['prot-adm-inss', admId]); setEditing(null); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ProtocoloAdmINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.ProtocoloAdmINSS.delete(id),
     onSuccess: () => queryClient.invalidateQueries(['prot-adm-inss', admId]),
   });
 

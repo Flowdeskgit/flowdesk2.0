@@ -72,6 +72,7 @@ import MeuPerfil from './pages/MeuPerfil';
 import MonitoramentoProcessual from './pages/MonitoramentoProcessual';
 import Notificacoes from './pages/Notificacoes';
 import PainelAcaoCEO from './pages/PainelAcaoCEO';
+import Perfis from './pages/Perfis';
 import Pessoas from './pages/Pessoas';
 import PostsMarketing from './pages/PostsMarketing';
 import Processos from './pages/Processos';
@@ -84,8 +85,6 @@ import Financeiro from './pages/Financeiro';
 import ProdutosEducacionais from './pages/ProdutosEducacionais';
 import Marketing from './pages/Marketing';
 import FolhaDePonto from './pages/FolhaDePonto';
-import Perfis from './pages/Perfis';
-import Login from './pages/Login';
 import __Layout from './Layout.jsx';
 
 
@@ -115,6 +114,7 @@ export const PAGES = {
     "MonitoramentoProcessual": MonitoramentoProcessual,
     "Notificacoes": Notificacoes,
     "PainelAcaoCEO": PainelAcaoCEO,
+    "Perfis": Perfis,
     "Pessoas": Pessoas,
     "PostsMarketing": PostsMarketing,
     "Processos": Processos,
@@ -127,8 +127,6 @@ export const PAGES = {
     "ProdutosEducacionais": ProdutosEducacionais,
     "Marketing": Marketing,
     "FolhaDePonto": FolhaDePonto,
-    "Perfis": Perfis,
-    "Login": Login,
 }
 
 export const pagesConfig = {

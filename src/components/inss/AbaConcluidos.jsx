@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, Archive, Edit2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -34,20 +34,20 @@ export default function AbaConcluidos({ processoId, centralId, user }) {
 
   const { data: concluidos = [] } = useQuery({
     queryKey: ['concluidos-inss', processoId],
-    queryFn: () => base44.entities.ConclusaoINSS.filter({ processo_id: processoId }),
+    queryFn: () => flowdesk.entities.ConclusaoINSS.filter({ processo_id: processoId }),
   });
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
       const payload = { ...data, processo_id: processoId, central_id: centralId, atualizado_por: user?.email || '' };
-      if (editing) return base44.entities.ConclusaoINSS.update(editing.id, payload);
-      return base44.entities.ConclusaoINSS.create({ ...payload, criado_por: user?.email || '' });
+      if (editing) return flowdesk.entities.ConclusaoINSS.update(editing.id, payload);
+      return flowdesk.entities.ConclusaoINSS.create({ ...payload, criado_por: user?.email || '' });
     },
     onSuccess: () => { qc.invalidateQueries(['concluidos-inss', processoId]); setOpen(false); setEditing(null); setForm(BLANK); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ConclusaoINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.ConclusaoINSS.delete(id),
     onSuccess: () => qc.invalidateQueries(['concluidos-inss', processoId]),
   });
 

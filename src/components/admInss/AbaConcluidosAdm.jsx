@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Plus, Pencil, Trash2, X, Save, FlagTriangleRight } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -20,22 +19,22 @@ export default function AbaConcluidosAdm({ admId }) {
 
   const { data: conclusoes = [] } = useQuery({
     queryKey: ['conc-adm-inss', admId],
-    queryFn: () => base44.entities.ConclusaoAdmINSS.filter({ administrativo_inss_id: admId }),
+    queryFn: () => flowdesk.entities.ConclusaoAdmINSS.filter({ administrativo_inss_id: admId }),
     enabled: !!admId,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ConclusaoAdmINSS.create({ ...data, administrativo_inss_id: admId }),
+    mutationFn: (data) => flowdesk.entities.ConclusaoAdmINSS.create({ ...data, administrativo_inss_id: admId }),
     onSuccess: () => { queryClient.invalidateQueries(['conc-adm-inss', admId]); setShowForm(false); setForm(EMPTY); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ConclusaoAdmINSS.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.ConclusaoAdmINSS.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries(['conc-adm-inss', admId]); setEditing(null); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ConclusaoAdmINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.ConclusaoAdmINSS.delete(id),
     onSuccess: () => queryClient.invalidateQueries(['conc-adm-inss', admId]),
   });
 

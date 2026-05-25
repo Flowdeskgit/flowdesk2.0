@@ -1,7 +1,7 @@
 import React from 'react';
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Bell, CheckCircle2, AlertTriangle, Clock, Users, FileText, Activity } from 'lucide-react';
+import { Bell, CheckCircle2, AlertTriangle, Clock, FileText, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const EVENT_TYPES = {
@@ -44,7 +44,7 @@ export default function ActivityFeed({ notificacoes = [], tarefas = [], alertas 
     <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-violet-600 to-purple-700 flex items-center justify-center shadow-sm">
+          <div className="h-9 w-9 rounded-xl bg-brand-electric flex items-center justify-center shadow-sm shadow-brand-electric/20">
             <Activity className="h-4 w-4 text-white" />
           </div>
           <div>
@@ -53,7 +53,7 @@ export default function ActivityFeed({ notificacoes = [], tarefas = [], alertas 
           </div>
         </div>
         {unreadCount > 0 && (
-          <Badge className="bg-violet-100 text-violet-700 border-0 text-xs">{unreadCount} novo{unreadCount > 1 ? 's' : ''}</Badge>
+          <Badge className="bg-brand-electric/10 text-brand-electric border-0 text-xs">{unreadCount} novo{unreadCount > 1 ? 's' : ''}</Badge>
         )}
       </div>
 
@@ -73,7 +73,7 @@ export default function ActivityFeed({ notificacoes = [], tarefas = [], alertas 
             } catch {}
 
             return (
-              <div key={item.id} className={`flex items-start gap-3 px-5 py-3 hover:bg-muted/30 transition-colors ${item.unread ? 'bg-violet-50/30' : ''}`}>
+              <div key={item.id} className={`flex items-start gap-3 px-5 py-3 hover:bg-muted/30 transition-colors ${item.unread ? 'bg-brand-electric/5' : ''}`}>
                 <div className={`flex-shrink-0 mt-0.5 h-8 w-8 rounded-full ${config.bg} flex items-center justify-center`}>
                   <Icon className={`h-3.5 w-3.5 ${config.color}`} />
                 </div>
@@ -82,7 +82,7 @@ export default function ActivityFeed({ notificacoes = [], tarefas = [], alertas 
                   {item.message && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{item.message}</p>}
                   <p className="text-[10px] text-muted-foreground/60 mt-1">{timeAgo}</p>
                 </div>
-                {item.unread && <div className="flex-shrink-0 mt-2 h-2 w-2 rounded-full bg-violet-500" />}
+                {item.unread && <div className="flex-shrink-0 mt-2 h-2 w-2 rounded-full bg-brand-electric" />}
               </div>
             );
           })

@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Plus,
   Search,
-  Filter,
   Bell,
   Calendar,
   User,
@@ -79,16 +78,16 @@ export default function Alertas() {
 
   const { data: alertas = [], isLoading } = useQuery({
     queryKey: ['alertas'],
-    queryFn: () => base44.entities.Alerta.list('-created_date'),
+    queryFn: () => flowdesk.entities.Alerta.list('-created_date'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Alerta.create(data),
+    mutationFn: (data) => flowdesk.entities.Alerta.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alertas'] });
       closeDialog();
@@ -96,7 +95,7 @@ export default function Alertas() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Alerta.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.Alerta.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alertas'] });
       closeDialog();
@@ -104,7 +103,7 @@ export default function Alertas() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Alerta.delete(id),
+    mutationFn: (id) => flowdesk.entities.Alerta.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alertas'] });
     },

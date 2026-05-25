@@ -1,0 +1,68 @@
+{
+  "name": "LeadMarketing",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string"
+    },
+    "origem": {
+      "type": "string",
+      "enum": [
+        "Instagram",
+        "Landing Page",
+        "Indica\u00e7\u00e3o",
+        "WhatsApp",
+        "Facebook",
+        "LinkedIn",
+        "Outro"
+      ],
+      "default": "Instagram"
+    },
+    "interesse": {
+      "type": "string",
+      "enum": [
+        "Livro",
+        "Mentoria",
+        "Jur\u00eddico",
+        "Clube do Livro",
+        "Outro"
+      ],
+      "default": "Jur\u00eddico"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Novo",
+        "Contato feito",
+        "Negocia\u00e7\u00e3o",
+        "Fechado",
+        "Perdido"
+      ],
+      "default": "Novo"
+    },
+    "ultimo_contato": {
+      "type": "string",
+      "format": "date"
+    },
+    "proximo_followup": {
+      "type": "string",
+      "format": "date"
+    },
+    "responsavel": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "anexos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "nome",
+    "status"
+  ]
+}

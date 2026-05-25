@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, TrendingUp, UserCheck, Send, CheckCircle, XCircle, BarChart3, MapPin } from 'lucide-react';
+import { Users, TrendingUp, UserCheck, CheckCircle, XCircle, BarChart3, MapPin } from 'lucide-react';
 
 const statusColors = {
   'Leads Novos': 'from-blue-500 to-blue-600',

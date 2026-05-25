@@ -1,0 +1,101 @@
+{
+  "name": "ModeloDocumento",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do modelo de documento"
+    },
+    "categoria": {
+      "type": "string",
+      "enum": [
+        "Previdenci\u00e1rio",
+        "Trabalhista",
+        "Banc\u00e1rio",
+        "C\u00edvel",
+        "Administrativo",
+        "Kit Judicial",
+        "Ficha Question\u00e1rio",
+        "Rol de Testemunhas",
+        "Simula\u00e7\u00e3o",
+        "Solicita\u00e7\u00e3o de Prontu\u00e1rio",
+        "Solicita\u00e7\u00e3o de Documentos",
+        "Autodeclara\u00e7\u00e3o",
+        "Outro"
+      ],
+      "default": "Previdenci\u00e1rio"
+    },
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o do modelo"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tags para facilitar a busca"
+    },
+    "arquivo_url": {
+      "type": "string",
+      "description": "URL do arquivo modelo"
+    },
+    "nome_arquivo": {
+      "type": "string",
+      "description": "Nome original do arquivo"
+    },
+    "tipo_arquivo": {
+      "type": "string",
+      "enum": [
+        "docx",
+        "doc",
+        "pdf",
+        "xlsx",
+        "xls",
+        "jpg",
+        "jpeg",
+        "png",
+        "texto",
+        "outro"
+      ],
+      "default": "docx"
+    },
+    "conteudo_template": {
+      "type": "string",
+      "description": "Conte\u00fado do template em texto com vari\u00e1veis {{nome_variavel}}"
+    },
+    "versao": {
+      "type": "string",
+      "default": "1.0",
+      "description": "Vers\u00e3o do modelo"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "inativo"
+      ],
+      "default": "ativo"
+    },
+    "cadastrado_por": {
+      "type": "string",
+      "description": "Email do usu\u00e1rio que cadastrou"
+    },
+    "campos_variaveis": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Lista de campos vari\u00e1veis do modelo"
+    },
+    "total_usos": {
+      "type": "number",
+      "default": 0,
+      "description": "Contador de usos do modelo"
+    }
+  },
+  "required": [
+    "nome",
+    "categoria"
+  ]
+}

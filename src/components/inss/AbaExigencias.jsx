@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Plus, AlertTriangle, Edit2, Trash2 } from 'lucide-react';
-import { format, isAfter, isBefore, addDays } from 'date-fns';
+import { format, isBefore, addDays } from 'date-fns';
 
 const STATUS_COLORS = {
   'Pendente': 'bg-yellow-100 text-yellow-700',
@@ -45,19 +45,19 @@ export default function AbaExigencias({ processoId, centralId, user, onTarefaCri
 
   const { data: exigencias = [] } = useQuery({
     queryKey: ['exigencias-inss', processoId],
-    queryFn: () => base44.entities.ExigenciaINSS.filter({ processo_id: processoId }),
+    queryFn: () => flowdesk.entities.ExigenciaINSS.filter({ processo_id: processoId }),
   });
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const payload = { ...data, processo_id: processoId, central_id: centralId, atualizado_por: user?.email || '' };
-      if (editing) return base44.entities.ExigenciaINSS.update(editing.id, payload);
-      return base44.entities.ExigenciaINSS.create({ ...payload, criado_por: user?.email || '' });
+      if (editing) return flowdesk.entities.ExigenciaINSS.update(editing.id, payload);
+      return flowdesk.entities.ExigenciaINSS.create({ ...payload, criado_por: user?.email || '' });
     },
     onSuccess: async (saved) => {
       qc.invalidateQueries(['exigencias-inss', processoId]);
       if (!editing) {
-        await base44.entities.TarefaINSS.create({
+        await flowdesk.entities.TarefaINSS.create({
           processo_id: processoId,
           central_id: centralId,
           titulo_tarefa: `Cumprir exigência: ${form.descricao_exigencia?.substring(0, 60)}`,
@@ -78,7 +78,7 @@ export default function AbaExigencias({ processoId, centralId, user, onTarefaCri
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.ExigenciaINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.ExigenciaINSS.delete(id),
     onSuccess: () => qc.invalidateQueries(['exigencias-inss', processoId]),
   });
 

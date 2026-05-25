@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -127,17 +127,17 @@ export default function BlocoDeNotas() {
   const [savedNota, setSavedNota] = useState(null);
 
   useEffect(() => {
-    base44.auth.me().then(setCurrentUser).catch(() => {});
+    flowdesk.auth.me().then(setCurrentUser).catch(() => {});
   }, []);
 
   const { data: notas = [], isLoading } = useQuery({
     queryKey: ['bloco-notas', currentUser?.email],
-    queryFn: () => base44.entities.BlocosDeNotasUsuario.filter({ usuario_id: currentUser.email }, '-created_date'),
+    queryFn: () => flowdesk.entities.BlocosDeNotasUsuario.filter({ usuario_id: currentUser.email }, '-created_date'),
     enabled: !!currentUser?.email,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.BlocosDeNotasUsuario.create(data),
+    mutationFn: (data) => flowdesk.entities.BlocosDeNotasUsuario.create(data),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: ['bloco-notas', currentUser?.email] });
       setSavedNota(created);
@@ -145,7 +145,7 @@ export default function BlocoDeNotas() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.BlocosDeNotasUsuario.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.BlocosDeNotasUsuario.update(id, data),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['bloco-notas', currentUser?.email] });
       setSavedNota(updated);
@@ -153,7 +153,7 @@ export default function BlocoDeNotas() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.BlocosDeNotasUsuario.delete(id),
+    mutationFn: (id) => flowdesk.entities.BlocosDeNotasUsuario.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bloco-notas', currentUser?.email] });
       setDeleteTarget(null);

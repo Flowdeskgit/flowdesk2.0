@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
@@ -10,8 +10,7 @@ import {
   Phone,
   MoreVertical,
   Edit,
-  Trash2,
-  Briefcase
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,21 +64,21 @@ export default function Pessoas() {
 
   const { data: pessoas = [], isLoading } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const { data: tarefas = [] } = useQuery({
     queryKey: ['tarefas'],
-    queryFn: () => base44.entities.Tarefa.list(),
+    queryFn: () => flowdesk.entities.Tarefa.list(),
   });
 
   const { data: atendimentos = [] } = useQuery({
     queryKey: ['atendimentos'],
-    queryFn: () => base44.entities.Atendimento.list(),
+    queryFn: () => flowdesk.entities.Atendimento.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Pessoa.create(data),
+    mutationFn: (data) => flowdesk.entities.Pessoa.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pessoas'] });
       closeDialog();
@@ -87,7 +86,7 @@ export default function Pessoas() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Pessoa.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.Pessoa.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pessoas'] });
       closeDialog();
@@ -95,7 +94,7 @@ export default function Pessoas() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Pessoa.delete(id),
+    mutationFn: (id) => flowdesk.entities.Pessoa.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pessoas'] });
     },

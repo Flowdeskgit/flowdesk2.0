@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Pencil, Trash2, MoreVertical, Users, Paperclip, Upload, X, FileText } from 'lucide-react';
@@ -33,7 +33,7 @@ const EMPTY_FORM = {
 async function uploadFiles(files) {
   const urls = [];
   for (const file of files) {
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await flowdesk.integrations.Core.UploadFile({ file });
     urls.push(file_url);
   }
   return urls;
@@ -49,24 +49,24 @@ export default function AbaCopiasPA({ admId }) {
   const { data: copias = [] } = useQuery({
     queryKey: ['copias-pa', admId || 'all'],
     queryFn: () => admId
-      ? base44.entities.CopiasPA.filter({ adm_id: admId })
-      : base44.entities.CopiasPA.list('-created_date', 500),
+      ? flowdesk.entities.CopiasPA.filter({ adm_id: admId })
+      : flowdesk.entities.CopiasPA.list('-created_date', 500),
   });
 
   const qk = ['copias-pa', admId || 'all'];
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.CopiasPA.create({ ...data, adm_id: admId }),
+    mutationFn: (data) => flowdesk.entities.CopiasPA.create({ ...data, adm_id: admId }),
     onSuccess: () => { queryClient.invalidateQueries(qk); closeForm(); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.CopiasPA.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.CopiasPA.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries(qk); closeForm(); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.CopiasPA.delete(id),
+    mutationFn: (id) => flowdesk.entities.CopiasPA.delete(id),
     onSuccess: () => queryClient.invalidateQueries(qk),
   });
 

@@ -1,0 +1,52 @@
+{
+  "name": "Notificacao",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo da notifica\u00e7\u00e3o"
+    },
+    "mensagem": {
+      "type": "string",
+      "description": "Mensagem da notifica\u00e7\u00e3o"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "tarefa_criada",
+        "tarefa_atrasada",
+        "prazo_vencendo",
+        "alerta",
+        "info"
+      ],
+      "default": "info"
+    },
+    "usuario_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio destinat\u00e1rio"
+    },
+    "tarefa_id": {
+      "type": "string",
+      "description": "ID da tarefa relacionada"
+    },
+    "atendimento_id": {
+      "type": "string",
+      "description": "ID do atendimento relacionado"
+    },
+    "lida": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se a notifica\u00e7\u00e3o foi lida"
+    },
+    "data_leitura": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Quando foi lida"
+    }
+  },
+  "required": [
+    "titulo",
+    "mensagem",
+    "tipo"
+  ]
+}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Calendar } from '@/components/ui/calendar';
 import { ptBR } from 'date-fns/locale';
 import { format, isSameDay } from 'date-fns';
@@ -36,11 +36,11 @@ export default function AgendaComercial() {
 
   const { data: eventos = [] } = useQuery({
     queryKey: ['agenda-comercial'],
-    queryFn: () => base44.entities.AgendaComercial.list(),
+    queryFn: () => flowdesk.entities.AgendaComercial.list(),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.AgendaComercial.create(data),
+    mutationFn: (data) => flowdesk.entities.AgendaComercial.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agenda-comercial'] });
       closeDialog();
@@ -48,7 +48,7 @@ export default function AgendaComercial() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.AgendaComercial.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.AgendaComercial.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agenda-comercial'] });
       closeDialog();
@@ -56,7 +56,7 @@ export default function AgendaComercial() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.AgendaComercial.delete(id),
+    mutationFn: (id) => flowdesk.entities.AgendaComercial.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agenda-comercial'] });
     },

@@ -1,0 +1,42 @@
+{
+  "name": "MetaProdutividade",
+  "type": "object",
+  "properties": {
+    "usuario_id": {
+      "type": "string",
+      "description": "ID do usu\u00e1rio"
+    },
+    "meta_diaria_atendimentos": {
+      "type": "number",
+      "default": 0,
+      "description": "Meta di\u00e1ria de atendimentos"
+    },
+    "meta_diaria_tarefas": {
+      "type": "number",
+      "default": 0,
+      "description": "Meta di\u00e1ria de tarefas"
+    },
+    "meta_mensal_atendimentos": {
+      "type": "number",
+      "default": 0,
+      "description": "Meta mensal de atendimentos"
+    },
+    "meta_mensal_tarefas": {
+      "type": "number",
+      "default": 0,
+      "description": "Meta mensal de tarefas"
+    },
+    "meta_mensal_eventos": {
+      "type": "number",
+      "default": 0,
+      "description": "Meta mensal de eventos"
+    },
+    "observacoes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre as metas"
+    }
+  },
+  "required": [
+    "usuario_id"
+  ]
+}

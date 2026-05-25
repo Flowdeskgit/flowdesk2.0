@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,19 +26,19 @@ export default function AbaIndeferidos({ processoId, centralId, user, onTarefaCr
 
   const { data: indeferidos = [] } = useQuery({
     queryKey: ['indeferidos-inss', processoId],
-    queryFn: () => base44.entities.IndeferidoINSS.filter({ processo_id: processoId }),
+    queryFn: () => flowdesk.entities.IndeferidoINSS.filter({ processo_id: processoId }),
   });
 
   const saveMutation = useMutation({
     mutationFn: async (data) => {
       const payload = { ...data, processo_id: processoId, central_id: centralId, atualizado_por: user?.email || '' };
-      if (editing) return base44.entities.IndeferidoINSS.update(editing.id, payload);
-      return base44.entities.IndeferidoINSS.create({ ...payload, criado_por: user?.email || '' });
+      if (editing) return flowdesk.entities.IndeferidoINSS.update(editing.id, payload);
+      return flowdesk.entities.IndeferidoINSS.create({ ...payload, criado_por: user?.email || '' });
     },
     onSuccess: async (saved) => {
       qc.invalidateQueries(['indeferidos-inss', processoId]);
       if (!editing && form.possibilidade_de_recurso === 'Sim') {
-        await base44.entities.TarefaINSS.create({
+        await flowdesk.entities.TarefaINSS.create({
           processo_id: processoId,
           central_id: centralId,
           titulo_tarefa: 'Analisar recurso administrativo',
@@ -58,7 +58,7 @@ export default function AbaIndeferidos({ processoId, centralId, user, onTarefaCr
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.IndeferidoINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.IndeferidoINSS.delete(id),
     onSuccess: () => qc.invalidateQueries(['indeferidos-inss', processoId]),
   });
 

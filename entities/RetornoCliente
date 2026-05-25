@@ -1,0 +1,50 @@
+{
+  "name": "RetornoCliente",
+  "type": "object",
+  "properties": {
+    "cliente": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "atendimento_id": {
+      "type": "string",
+      "description": "ID do atendimento relacionado"
+    },
+    "motivo": {
+      "type": "string",
+      "description": "Motivo do retorno (atualiza\u00e7\u00e3o do processo, verificar documenta\u00e7\u00e3o, etc)"
+    },
+    "data_prevista": {
+      "type": "string",
+      "format": "date",
+      "description": "Data prevista para retorno"
+    },
+    "data_realizado": {
+      "type": "string",
+      "format": "date",
+      "description": "Data em que o retorno foi realizado"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pendente",
+        "Contatado",
+        "Conclu\u00eddo",
+        "N\u00e3o Atendeu"
+      ],
+      "default": "Pendente"
+    },
+    "responsavel_id": {
+      "type": "string",
+      "description": "ID da pessoa respons\u00e1vel"
+    },
+    "observacoes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "cliente",
+    "motivo",
+    "status"
+  ]
+}

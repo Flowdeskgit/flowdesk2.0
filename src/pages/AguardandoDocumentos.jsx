@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { FileText, Plus, Search, Clock, CheckCircle, AlertTriangle, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { FileText, Plus, Search, Clock, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -43,21 +43,21 @@ export default function AguardandoDocumentos() {
 
   const { data: documentos = [], isLoading } = useQuery({
     queryKey: ['aguardando-documentos'],
-    queryFn: () => base44.entities.AguardandoDocumento.list('-created_date'),
+    queryFn: () => flowdesk.entities.AguardandoDocumento.list('-created_date'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const { data: atendimentos = [] } = useQuery({
     queryKey: ['atendimentos'],
-    queryFn: () => base44.entities.Atendimento.list('-created_date'),
+    queryFn: () => flowdesk.entities.Atendimento.list('-created_date'),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.AguardandoDocumento.create(data),
+    mutationFn: (data) => flowdesk.entities.AguardandoDocumento.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aguardando-documentos'] });
       closeDialog();
@@ -65,7 +65,7 @@ export default function AguardandoDocumentos() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.AguardandoDocumento.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.AguardandoDocumento.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aguardando-documentos'] });
       closeDialog();
@@ -73,7 +73,7 @@ export default function AguardandoDocumentos() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.AguardandoDocumento.delete(id),
+    mutationFn: (id) => flowdesk.entities.AguardandoDocumento.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['aguardando-documentos'] });
     },
@@ -115,8 +115,6 @@ export default function AguardandoDocumentos() {
     return pessoa?.nome || '-';
   };
 
-  const TIPOS_DOC = ['Documentos', 'Cópia PA', 'CNIS', 'Prontuário Médico', 'Certidão', 'Formulário', 'Outro'];
-
   const filteredDocumentos = documentos.filter(doc => {
     const matchesSearch = doc.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doc.documentos_pendentes?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -145,22 +143,23 @@ export default function AguardandoDocumentos() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
+
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground md:text-3xl">Aguardando Documentos</h1>
             <p className="text-muted-foreground">Documentos pendentes dos clientes</p>
           </div>
-          <Button 
+          <Button
             onClick={() => setIsDialogOpen(true)}
-            className="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700"
+            className="bg-[#378ADD] hover:bg-[#185FA5] text-white"
           >
             <Plus className="mr-2 h-4 w-4" />
             Novo Registro
           </Button>
         </div>
 
-        {/* Search + Filtro Tipo */}
+        {/* Search + Filtro */}
         <div className="flex flex-col gap-3 md:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -191,149 +190,157 @@ export default function AguardandoDocumentos() {
             <TabsTrigger value="concluidos">Concluídos ({concluidos.length})</TabsTrigger>
           </TabsList>
 
+          {/* Abertos */}
           <TabsContent value="abertos" className="mt-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <AnimatePresence>
                 {abertos.map((doc, index) => {
-              const diasRestantes = doc.prazo_entrega ? differenceInDays(parseISO(doc.prazo_entrega), new Date()) : null;
-              
-              return (
-                <motion.div
-                  key={doc.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="rounded-2xl border-2 border-border bg-card p-6 hover:shadow-lg transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-foreground text-lg mb-1">{doc.cliente}</h3>
-                      <div className="flex items-center gap-2 flex-wrap">
+                  const diasRestantes = doc.prazo_entrega
+                    ? differenceInDays(parseISO(doc.prazo_entrega), new Date())
+                    : null;
+
+                  return (
+                    <motion.div
+                      key={doc.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="rounded-2xl border border-border bg-card p-6 hover:shadow-lg transition-shadow"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground text-lg mb-1">{doc.cliente}</h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge className={`${statusColors[doc.status]} border`}>
+                              {doc.status}
+                            </Badge>
+                            {doc.tipo && doc.tipo !== 'Documentos' && (
+                              <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
+                                {doc.tipo}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openEditDialog(doc)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => deleteMutation.mutate(doc.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      <div className="space-y-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs mb-1">Documentos Pendentes:</p>
+                          <p className="text-foreground">{doc.documentos_pendentes}</p>
+                        </div>
+
+                        {doc.prazo_entrega && (
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-slate-400" />
+                            <span className={`text-xs ${
+                              diasRestantes < 0
+                                ? 'text-red-400 font-medium'
+                                : diasRestantes <= 3
+                                ? 'text-amber-400'
+                                : 'text-muted-foreground'
+                            }`}>
+                              Prazo: {format(parseISO(doc.prazo_entrega), 'dd/MM/yyyy', { locale: ptBR })}
+                              {diasRestantes !== null && (
+                                <span className="ml-1">
+                                  ({diasRestantes < 0
+                                    ? `${Math.abs(diasRestantes)}d atrasado`
+                                    : `${diasRestantes}d restantes`})
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        )}
+
+                        {doc.responsavel_id && (
+                          <div className="text-xs text-muted-foreground">
+                            Responsável: {getPessoaNome(doc.responsavel_id)}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+
+            {abertos.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mb-4" />
+                <p className="text-lg">Nenhum documento pendente</p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Concluídos */}
+          <TabsContent value="concluidos" className="mt-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <AnimatePresence>
+                {concluidos.map((doc, index) => (
+                  <motion.div
+                    key={doc.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="rounded-2xl border border-border bg-card p-6 opacity-75"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-foreground text-lg mb-1">{doc.cliente}</h3>
                         <Badge className={`${statusColors[doc.status]} border`}>
                           {doc.status}
                         </Badge>
-                        {doc.tipo && doc.tipo !== 'Documentos' && (
-                          <Badge variant="outline" className="text-xs border-slate-300 text-slate-600">
-                            {doc.tipo}
-                          </Badge>
-                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-600"
+                        onClick={() => deleteMutation.mutate(doc.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <p className="text-muted-foreground text-xs mb-1">Documentos:</p>
+                        <p className="text-foreground line-clamp-2">{doc.documentos_pendentes}</p>
                       </div>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditDialog(doc)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => deleteMutation.mutate(doc.id)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
 
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Documentos Pendentes:</p>
-                      <p className="text-foreground">{doc.documentos_pendentes}</p>
-                    </div>
-
-                    {doc.prazo_entrega && (
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-slate-400" />
-                        <span className={`text-xs ${diasRestantes < 0 ? 'text-red-400 font-medium' : diasRestantes <= 3 ? 'text-amber-400' : 'text-muted-foreground'}`}>
-                          Prazo: {format(parseISO(doc.prazo_entrega), 'dd/MM/yyyy', { locale: ptBR })}
-                          {diasRestantes !== null && (
-                            <span className="ml-1">
-                              ({diasRestantes < 0 ? `${Math.abs(diasRestantes)}d atrasado` : `${diasRestantes}d restantes`})
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    )}
-
-                    {doc.responsavel_id && (
-                      <div className="text-xs text-muted-foreground">
-                        Responsável: {getPessoaNome(doc.responsavel_id)}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-
-        {abertos.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <FileText className="h-12 w-12 mb-4" />
-            <p className="text-lg">Nenhum documento pendente</p>
-          </div>
-        )}
-      </TabsContent>
-
-      <TabsContent value="concluidos" className="mt-6">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <AnimatePresence>
-            {concluidos.map((doc, index) => {
-              const diasRestantes = doc.prazo_entrega ? differenceInDays(parseISO(doc.prazo_entrega), new Date()) : null;
-              
-              return (
-                <motion.div
-                  key={doc.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="rounded-2xl border-2 border-border bg-card p-6 opacity-75"
-                  >
-                   <div className="flex items-start justify-between mb-4">
-                     <div className="flex-1">
-                       <h3 className="font-semibold text-foreground text-lg mb-1">{doc.cliente}</h3>
-                      <Badge className={`${statusColors[doc.status]} border`}>
-                        {doc.status}
-                      </Badge>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-600"
-                      onClick={() => deleteMutation.mutate(doc.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs mb-1">Documentos:</p>
-                      <p className="text-foreground line-clamp-2">{doc.documentos_pendentes}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </div>
-
-        {concluidos.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <FileText className="h-12 w-12 mb-4" />
-            <p className="text-lg">Nenhum documento concluído</p>
-          </div>
-        )}
-      </TabsContent>
-    </Tabs>
+            {concluidos.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mb-4" />
+                <p className="text-lg">Nenhum documento concluído</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -409,9 +416,7 @@ export default function AguardandoDocumentos() {
                 <div>
                   <label className="text-sm font-medium">Status</label>
                   <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Aguardando">Aguardando</SelectItem>
                       <SelectItem value="Recebido Parcialmente">Recebido Parcialmente</SelectItem>
@@ -449,13 +454,17 @@ export default function AguardandoDocumentos() {
                 <Button type="button" variant="outline" onClick={closeDialog}>
                   Cancelar
                 </Button>
-                <Button type="submit" className="bg-gradient-to-r from-rose-600 to-pink-600">
+                <Button
+                  type="submit"
+                  className="bg-[#378ADD] hover:bg-[#185FA5] text-white"
+                >
                   {editingItem ? 'Atualizar' : 'Criar'}
                 </Button>
               </div>
             </form>
           </DialogContent>
         </Dialog>
+
       </div>
     </div>
   );

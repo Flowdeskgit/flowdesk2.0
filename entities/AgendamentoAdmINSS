@@ -1,0 +1,60 @@
+{
+  "name": "AgendamentoAdmINSS",
+  "type": "object",
+  "properties": {
+    "administrativo_inss_id": {
+      "type": "string"
+    },
+    "tipo_agendamento": {
+      "type": "string",
+      "enum": [
+        "Per\u00edcia m\u00e9dica",
+        "Avalia\u00e7\u00e3o social",
+        "Atendimento presencial",
+        "Cumprimento de exig\u00eancia",
+        "Entrega de documentos",
+        "Justifica\u00e7\u00e3o administrativa",
+        "Outro"
+      ]
+    },
+    "data_agendada": {
+      "type": "string",
+      "format": "date"
+    },
+    "hora_agendada": {
+      "type": "string"
+    },
+    "local_agendamento": {
+      "type": "string"
+    },
+    "unidade_inss": {
+      "type": "string"
+    },
+    "status_agendamento": {
+      "type": "string",
+      "enum": [
+        "Pendente",
+        "Agendado",
+        "Reagendado",
+        "Realizado",
+        "Cancelado",
+        "N\u00e3o compareceu"
+      ],
+      "default": "Pendente"
+    },
+    "resultado_agendamento": {
+      "type": "string"
+    },
+    "documentos_necessarios": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "administrativo_inss_id",
+    "tipo_agendamento",
+    "data_agendada"
+  ]
+}

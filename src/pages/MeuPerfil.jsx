@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { User, Mail, Phone, Building2, Lock, Eye, EyeOff, CheckCircle2, Save, Camera, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,12 +28,12 @@ export default function MeuPerfil() {
 
   const { data: user, isLoading } = useQuery({
     queryKey: ['current-user'],
-    queryFn: () => base44.auth.me(),
+    queryFn: () => flowdesk.auth.me(),
   });
 
   const { data: pessoaData } = useQuery({
     queryKey: ['pessoa-perfil', user?.email],
-    queryFn: () => base44.entities.Pessoa.filter({ email: user.email }),
+    queryFn: () => flowdesk.entities.Pessoa.filter({ email: user.email }),
     enabled: !!user?.email,
   });
 
@@ -56,14 +56,14 @@ export default function MeuPerfil() {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { alert('Imagem muito grande. Máximo 5MB.'); return; }
     setUploadingPhoto(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    await base44.auth.updateMe({ foto_perfil: file_url });
+    const { file_url } = await flowdesk.integrations.Core.UploadFile({ file });
+    await flowdesk.auth.updateMe({ foto_perfil: file_url });
     queryClient.invalidateQueries({ queryKey: ['current-user'] });
     setUploadingPhoto(false);
   };
 
   const handleRemovePhoto = async () => {
-    await base44.auth.updateMe({ foto_perfil: '' });
+    await flowdesk.auth.updateMe({ foto_perfil: '' });
     queryClient.invalidateQueries({ queryKey: ['current-user'] });
   };
 
@@ -77,11 +77,11 @@ export default function MeuPerfil() {
       const updates = { last_updated: new Date().toISOString() };
       if (data.senha_fj) updates.senha_fj = data.senha_fj;
 
-      await base44.auth.updateMe(updates);
+      await flowdesk.auth.updateMe(updates);
 
       // Update Pessoa record if exists
       if (pessoa?.id) {
-        await base44.entities.Pessoa.update(pessoa.id, {
+        await flowdesk.entities.Pessoa.update(pessoa.id, {
           telefone: data.telefone,
           cargo: data.cargo,
           email: data.email,
@@ -106,7 +106,7 @@ export default function MeuPerfil() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-2xl space-y-4">
           <Skeleton className="h-10 w-48" />
           <Skeleton className="h-64 rounded-2xl" />
@@ -116,7 +116,7 @@ export default function MeuPerfil() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="mx-auto max-w-2xl space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -124,7 +124,7 @@ export default function MeuPerfil() {
             {user?.foto_perfil ? (
               <img src={user.foto_perfil} alt={user.full_name} className="h-20 w-20 rounded-2xl object-cover border-2 border-rose-200 shadow-lg" />
             ) : (
-              <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+              <div className="h-20 w-20 rounded-2xl bg-brand-electric flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-brand-electric/25">
                 {(user?.full_name || 'U').charAt(0).toUpperCase()}
               </div>
             )}
@@ -143,11 +143,11 @@ export default function MeuPerfil() {
             <input ref={fileInputRef} type="file" accept="image/jpg,image/jpeg,image/png" className="hidden" onChange={handlePhotoUpload} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Meu Perfil</h1>
-            <p className="text-slate-600 text-sm">{user?.email}</p>
-            <p className="text-xs text-slate-400 mt-0.5">Passe o mouse sobre a foto para alterar</p>
+            <h1 className="text-2xl font-bold text-foreground">Meu Perfil</h1>
+            <p className="text-muted-foreground text-sm">{user?.email}</p>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">Passe o mouse sobre a foto para alterar</p>
             {user?.role && (
-              <Badge className="mt-1 bg-rose-100 text-rose-700 border-0">
+              <Badge className="mt-1 bg-brand-electric/10 text-brand-steel border border-brand-electric/20 font-medium">
                 {user.role === 'admin' ? 'Administrador' : 'Usuário'}
               </Badge>
             )}
@@ -161,14 +161,14 @@ export default function MeuPerfil() {
           </div>
         )}
 
-        <Card className="border-slate-200 shadow-sm bg-white">
+        <Card className="border shadow-sm bg-card">
           <CardHeader>
-            <CardTitle className="text-lg text-slate-800">Informações Pessoais</CardTitle>
+            <CardTitle className="text-lg text-foreground">Informações Pessoais</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-slate-700">
+                <Label className="flex items-center gap-2 text-foreground">
                   <User className="h-4 w-4" /> Nome completo
                 </Label>
                 <Input
@@ -179,7 +179,7 @@ export default function MeuPerfil() {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-slate-700">
+                <Label className="flex items-center gap-2 text-foreground">
                   <Mail className="h-4 w-4" /> E-mail
                 </Label>
                 <Input
@@ -191,7 +191,7 @@ export default function MeuPerfil() {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-slate-700">
+                <Label className="flex items-center gap-2 text-foreground">
                   <Phone className="h-4 w-4" /> Telefone
                 </Label>
                 <Input
@@ -202,7 +202,7 @@ export default function MeuPerfil() {
               </div>
 
               <div className="space-y-2">
-                <Label className="flex items-center gap-2 text-slate-700">
+                <Label className="flex items-center gap-2 text-foreground">
                   <Building2 className="h-4 w-4" /> Cargo / Setor
                 </Label>
                 <Select
@@ -226,7 +226,7 @@ export default function MeuPerfil() {
 
               <div className="border-t border-slate-100 pt-4">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-slate-700">
+                  <Label className="flex items-center gap-2 text-foreground">
                     <Lock className="h-4 w-4" /> Senha de acesso ao FJ
                   </Label>
                   <div className="relative">
@@ -239,26 +239,27 @@ export default function MeuPerfil() {
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       onClick={() => setShowSenha(!showSenha)}
                     >
                       {showSenha ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
-                  <p className="text-xs text-slate-500">Deixe em branco para manter a senha atual.</p>
+                  <p className="text-xs text-muted-foreground">Deixe em branco para manter a senha atual.</p>
                 </div>
               </div>
 
-              {user?.last_updated && (
-                <p className="text-xs text-slate-400">
+              {user?.last_updated && !isNaN(new Date(user.last_updated).getTime()) && (
+                <p className="text-xs text-muted-foreground/60">
                   Última atualização: {format(new Date(user.last_updated), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </p>
+
               )}
 
               <div className="flex justify-end pt-2">
                 <Button
                   type="submit"
-                  className="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700"
+                  className="bg-brand-electric hover:bg-brand-steel text-white"
                   disabled={updateMutation.isPending}
                 >
                   <Save className="mr-2 h-4 w-4" />

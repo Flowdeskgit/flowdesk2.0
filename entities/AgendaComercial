@@ -1,0 +1,66 @@
+{
+  "name": "AgendaComercial",
+  "type": "object",
+  "properties": {
+    "titulo": {
+      "type": "string",
+      "description": "T\u00edtulo do evento"
+    },
+    "descricao": {
+      "type": "string"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Post",
+        "Follow-up",
+        "Evento",
+        "Revis\u00e3o Estrat\u00e9gica",
+        "Campanha",
+        "Reuni\u00e3o"
+      ],
+      "default": "Post"
+    },
+    "data_hora": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "post_id": {
+      "type": "string",
+      "description": "ID do post vinculado"
+    },
+    "lead_id": {
+      "type": "string",
+      "description": "ID do lead vinculado"
+    },
+    "landing_page_id": {
+      "type": "string",
+      "description": "ID da landing page vinculada"
+    },
+    "responsavel_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Pendente",
+        "Realizado",
+        "Cancelado",
+        "Reagendado"
+      ],
+      "default": "Pendente"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "cor": {
+      "type": "string",
+      "description": "Cor do evento no calend\u00e1rio"
+    }
+  },
+  "required": [
+    "titulo",
+    "tipo",
+    "data_hora"
+  ]
+}

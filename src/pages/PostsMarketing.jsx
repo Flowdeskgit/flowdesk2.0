@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Image, Edit, Trash2, MoreVertical, Upload, X } from 'lucide-react';
+import { Plus, Search, Image, Edit, Trash2, MoreVertical, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,11 +35,11 @@ export default function PostsMarketing() {
 
   const { data: posts = [], isLoading } = useQuery({
     queryKey: ['posts-marketing'],
-    queryFn: () => base44.entities.PostMarketing.list('-created_date'),
+    queryFn: () => flowdesk.entities.PostMarketing.list('-created_date'),
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.PostMarketing.create(data),
+    mutationFn: (data) => flowdesk.entities.PostMarketing.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts-marketing'] });
       closeDialog();
@@ -47,7 +47,7 @@ export default function PostsMarketing() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.PostMarketing.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.PostMarketing.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts-marketing'] });
       closeDialog();
@@ -55,7 +55,7 @@ export default function PostsMarketing() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.PostMarketing.delete(id),
+    mutationFn: (id) => flowdesk.entities.PostMarketing.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts-marketing'] });
     },
@@ -70,7 +70,7 @@ export default function PostsMarketing() {
     
     for (const file of files) {
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const { file_url } = await flowdesk.integrations.Core.UploadFile({ file });
         uploadedUrls.push(file_url);
       } catch (error) {
         console.error('Erro ao fazer upload:', error);

@@ -1,487 +1,302 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { motion, AnimatePresence } from 'framer-motion';
-import { format, parseISO, differenceInDays, addDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import {
-  Plus,
-  Search,
-  Briefcase,
-  Calendar,
-  MoreVertical,
-  Edit,
-  Trash2,
-  ArrowRight,
-  CheckCircle2,
-  Link as LinkIcon,
-} from 'lucide-react';
+import { flowdesk } from '@/api/flowdeskClient';
 import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '../utils';
+import { createPageUrl } from '@/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  Briefcase, Plus, Search, MoreVertical, CheckCircle2,
+  ExternalLink, User, Calendar, ChevronRight, Hash, AlertCircle,
+} from 'lucide-react';
 
-const statusColors = {
-  'Em triagem': 'bg-purple-100 text-purple-700 border-purple-200',
-  'Em análise da Dra.': 'bg-amber-100 text-amber-700 border-amber-200',
-  'Criar tarefa': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Encerrado': 'bg-slate-100 text-slate-700 border-slate-200',
+const STATUS_DETALHADO = [
+  'Em triagem', 'Em atendimento', 'Aguardando documentos',
+  'Aguardando retorno', 'Em análise', 'Encerrado', 'Sem direito/interesse',
+];
+const POTENCIAL = ['Alto', 'Médio', 'Baixo'];
+const TIPOS_ATENDIMENTO = ['Presencial', 'Online', 'Telefone', 'WhatsApp'];
+const STATUS_TAREFA = ['Pendente', 'Em andamento', 'Urgente', 'Atrasado'];
+const PRIORIDADE_TAREFA = ['Baixa', 'Média', 'Alta', 'Urgente'];
+
+const EMPTY_FORM = {
+  numero_caso: '',
+  cliente: '',
+  cliente_id: '',
+  qualificacao: '',
+  assunto: '',
+  potencial: 'Médio',
+  status_detalhado: 'Em triagem',
+  tipo_atendimento: 'Presencial',
+  data_chegada: '',
+  data_atendimento: '',
+  observacoes: '',
+  motivo_encerramento: '',
+  responsavel_id: '',
+  status: 'Aberto',
+};
+
+const STATUS_COLORS = {
+  'Em triagem':            'bg-slate-100 text-slate-700 border-slate-200',
+  'Em atendimento':        'bg-blue-100 text-blue-700 border-blue-200',
+  'Aguardando documentos': 'bg-amber-100 text-amber-700 border-amber-200',
+  'Aguardando retorno':    'bg-orange-100 text-orange-700 border-orange-200',
+  'Em análise':            'bg-purple-100 text-purple-700 border-purple-200',
+  'Encerrado':             'bg-emerald-100 text-emerald-700 border-emerald-200',
   'Sem direito/interesse': 'bg-red-100 text-red-700 border-red-200',
 };
 
-const statusBadgeColors = {
-  'Em aberto': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Concluído': 'bg-green-100 text-green-700 border-green-200',
-  'Convertido em tarefa': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+const POTENCIAL_COLORS = {
+  'Alto':  'bg-green-100 text-green-700',
+  'Médio': 'bg-yellow-100 text-yellow-700',
+  'Baixo': 'bg-slate-100 text-slate-600',
 };
 
-function toISODateOnly(d) {
-  return d.toISOString().split('T')[0];
+function extrairNumeroAtendimento(item) {
+  const raw = String(item?.numero_caso || '').trim();
+  const match = raw.match(/\d+/);
+  const numero = match ? parseInt(match[0], 10) : Number.POSITIVE_INFINITY;
+
+  return Number.isFinite(numero) ? numero : Number.POSITIVE_INFINITY;
 }
 
-function prioridadeFromPotencial(potencial) {
-  if (potencial === 'Alto') return 'Alta';
-  if (potencial === 'Médio') return 'Média';
-  return 'Baixa';
+function ordenarAtendimentosPorNumero(lista) {
+  return [...lista].sort((a, b) => {
+    const numeroA = extrairNumeroAtendimento(a);
+    const numeroB = extrairNumeroAtendimento(b);
+
+    if (numeroA !== numeroB) return numeroA - numeroB;
+
+    const dataA = a.data_chegada || a.created_date || '';
+    const dataB = b.data_chegada || b.created_date || '';
+
+    return String(dataA).localeCompare(String(dataB));
+  });
 }
 
-function dueDaysFromPotencial(potencial) {
-  if (potencial === 'Alto') return 3;
-  if (potencial === 'Médio') return 7;
-  return 14;
-}
+function proximoNumeroDia(atendimentos) {
+  const hoje = new Date().toISOString().split('T')[0];
+  const deHoje = atendimentos.filter(a => {
+    const d = (a.data_chegada || '').slice(0, 10) || (a.created_date || '').slice(0, 10);
+    return d === hoje;
+  });
 
-function normalizeText(value) {
-  return String(value || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim();
-}
+  const maiorNumeroHoje = deHoje.reduce((maior, item) => {
+    const numero = extrairNumeroAtendimento(item);
+    if (!Number.isFinite(numero)) return maior;
+    return Math.max(maior, numero);
+  }, 0);
 
-function buildClienteQualificacao(cliente) {
-  if (!cliente) return '';
-  const parts = [
-    cliente.cpf ? `CPF: ${cliente.cpf}` : '',
-    cliente.rg ? `RG: ${cliente.rg}` : '',
-    cliente.telefone ? `Telefone: ${cliente.telefone}` : '',
-    cliente.email ? `E-mail: ${cliente.email}` : '',
-    cliente.cidade || cliente.estado
-      ? `Cidade/UF: ${[cliente.cidade, cliente.estado].filter(Boolean).join(' / ')}`
-      : '',
-  ].filter(Boolean);
-
-  return parts.join(' | ');
+  return String(maiorNumeroHoje + 1); // ✅ sempre string
 }
 
 export default function Atendimentos() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const clienteInputRef = useRef(null);
+  const dialogScrollRef = useRef(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-
   const [formErrors, setFormErrors] = useState({});
-  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
-  const [convertAtendimento, setConvertAtendimento] = useState(null);
-  const [convertResponsavelId, setConvertResponsavelId] = useState('');
-  const [convertDataVencimento, setConvertDataVencimento] = useState('');
-  const [convertDescricao, setConvertDescricao] = useState('');
-
+  const [apiError, setApiError] = useState(''); // ✅ erro de API visível
   const [clienteSearch, setClienteSearch] = useState('');
-  const [selectedCliente, setSelectedCliente] = useState(null);
-  const [showClienteSuggestions, setShowClienteSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const clienteRef = useRef(null);
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const [formData, setFormData] = useState({
-    numero_caso: '',
-    cliente: '',
-    qualificacao: '',
-    assunto: '',
-    tipo_demanda: 'Outro',
-    descricao_demanda: '',
-    potencial: 'Médio',
-    status_detalhado: 'Em triagem',
-    tipo_atendimento: 'Presencial',
-    data_chegada: '',
-    data_atendimento: '',
-    observacoes: '',
-    motivo_encerramento: '',
-    ordem_prioridade: '',
-    responsavel_id: '',
+  const [isConvertOpen, setIsConvertOpen] = useState(false);
+  const [convertItem, setConvertItem] = useState(null);
+  const [convertForm, setConvertForm] = useState({
+    titulo: '', descricao: '', responsavel_id: '',
+    data_inicio: new Date().toISOString().split('T')[0],
+    data_vencimento: '', status_detalhado: 'Pendente', prioridade: 'Média', observacoes: '',
   });
 
   const { data: atendimentos = [], isLoading } = useQuery({
     queryKey: ['atendimentos'],
-    queryFn: () => base44.entities.Atendimento.list('-created_date'),
+    queryFn: () => flowdesk.entities.Atendimento.list('-created_date'),
+  });
+
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: () => flowdesk.entities.Cliente.list('nome_completo'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
-
-  const { data: clientes = [] } = useQuery({
-    queryKey: ['clientes-autocomplete'],
-    queryFn: () => base44.entities.Cliente.list('-created_date', 500),
-  });
-
-  const getPessoaNome = (id) => {
-    const pessoa = pessoas.find((p) => p.id === id);
-    return pessoa?.nome || '-';
-  };
-
-  const getDefaultDueDate = (atendimento) => {
-    const hoje = new Date();
-    const vencimento = addDays(hoje, dueDaysFromPotencial(atendimento?.potencial || 'Médio'));
-    return toISODateOnly(vencimento);
-  };
-
-  const filteredClientesSuggestions = useMemo(() => {
-    const q = normalizeText(clienteSearch);
-    if (!q) return clientes.slice(0, 8);
-
-    return clientes
-      .filter((cliente) => {
-        return [
-          cliente.nome_completo,
-          cliente.cpf,
-          cliente.telefone,
-          cliente.email,
-          cliente.cidade,
-        ].some((field) => normalizeText(field).includes(q));
-      })
-      .slice(0, 8);
-  }, [clientes, clienteSearch]);
-
-  const syncSelectedClienteFromNome = (nome) => {
-    const nomeNorm = normalizeText(nome);
-    if (!nomeNorm) {
-      setSelectedCliente(null);
-      return;
-    }
-
-    const match = clientes.find((c) => normalizeText(c.nome_completo) === nomeNorm);
-    setSelectedCliente(match || null);
-  };
-
-  useEffect(() => {
-    if (!isDialogOpen) return;
-    syncSelectedClienteFromNome(formData.cliente);
-  }, [clientes, isDialogOpen]);
-
-  useEffect(() => {
-    const onClickOutside = (event) => {
-      if (!clienteInputRef.current) return;
-      if (!clienteInputRef.current.contains(event.target)) {
-        setShowClienteSuggestions(false);
-      }
-    };
-
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, []);
-
-  const selectCliente = (cliente) => {
-    const qualificacaoAuto = buildClienteQualificacao(cliente);
-
-    setSelectedCliente(cliente);
-    setClienteSearch(cliente.nome_completo || '');
-    setFormData((prev) => ({
-      ...prev,
-      cliente: cliente.nome_completo || '',
-      qualificacao: qualificacaoAuto || prev.qualificacao || '',
-    }));
-    setShowClienteSuggestions(false);
-  };
-
-  const openConvertDialog = (atendimento) => {
-    setConvertAtendimento(atendimento);
-    setConvertResponsavelId(atendimento?.responsavel_id || '');
-    setConvertDataVencimento(getDefaultDueDate(atendimento));
-    setConvertDescricao(atendimento?.assunto || '');
-    setIsConvertDialogOpen(true);
-  };
-
-  const closeConvertDialog = () => {
-    setIsConvertDialogOpen(false);
-    setConvertAtendimento(null);
-    setConvertResponsavelId('');
-    setConvertDataVencimento('');
-    setConvertDescricao('');
-  };
 
   const createMutation = useMutation({
-    mutationFn: async (data) => {
-      const atendimento = await base44.entities.Atendimento.create(data);
-      await base44.entities.Auditoria.create({
-        modulo: 'Atendimento',
-        tipo_acao: 'Criação',
-        registro_id: atendimento.id,
-        registro_nome: atendimento.cliente,
-        observacao_sistema: `Atendimento criado: ${atendimento.cliente}`,
-      });
-      return atendimento;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atendimentos'] });
-      closeDialog();
+    mutationFn: (data) => flowdesk.entities.Atendimento.create(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['atendimentos'] }); closeDialog(); },
+    onError: (err) => { // ✅ mostra erro
+      setApiError(err?.message || 'Erro ao criar atendimento. Tente novamente.');
+      dialogScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     },
   });
 
-  const createTaskFromAtendimento = async (atendimento, overrides = {}) => {
-    if (!atendimento) throw new Error('Atendimento inválido.');
-    if (atendimento.tarefa_criada_id) {
-      throw new Error('Este atendimento já foi convertido em tarefa anteriormente.');
-    }
-
-    const hoje = new Date();
-
-    const responsavelFinal = overrides.responsavel_id ?? atendimento.responsavel_id ?? '';
-    const dataVencimentoFinal =
-      overrides.data_vencimento ??
-      toISODateOnly(addDays(hoje, dueDaysFromPotencial(atendimento.potencial)));
-
-    if (!responsavelFinal) {
-      throw new Error('Selecione o responsável para criar a tarefa.');
-    }
-    if (!dataVencimentoFinal) {
-      throw new Error('Selecione a data de vencimento para criar a tarefa.');
-    }
-
-    const payload = {
-      titulo: atendimento.cliente || 'Sem título',
-      descricao: overrides.descricao ?? atendimento.assunto ?? '',
-      responsavel_id: responsavelFinal,
-      data_inicio: toISODateOnly(hoje),
-      data_vencimento: dataVencimentoFinal,
-      prioridade: prioridadeFromPotencial(atendimento.potencial),
-      status: 'Pendente',
-      origem: 'Atendimento',
-      atendimento_id: atendimento.id,
-      observacoes: atendimento.observacoes || '',
-      anexos: [],
-      retorno_executivo: '',
-    };
-
-    const novaTarefa = await base44.entities.Tarefa.create(payload);
-
-    const user = await base44.auth.me();
-
-    await base44.entities.Atendimento.update(atendimento.id, {
-      tarefa_criada_id: novaTarefa.id,
-      status: 'Convertido em tarefa',
-      data_conversao_tarefa: new Date().toISOString(),
-      usuario_conversao_id: user.id,
-    });
-
-    return novaTarefa;
-  };
-
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }) => {
-      const atendimento = await base44.entities.Atendimento.update(id, data);
-      await base44.entities.Auditoria.create({
-        modulo: 'Atendimento',
-        tipo_acao: 'Edição',
-        registro_id: atendimento.id,
-        registro_nome: atendimento.cliente,
-        observacao_sistema: `Atendimento atualizado: ${atendimento.cliente}`,
-      });
-      return atendimento;
-    },
-    onSuccess: async (atendimentoAtualizado) => {
-      queryClient.invalidateQueries({ queryKey: ['atendimentos'] });
-
-      if (
-        atendimentoAtualizado.status_detalhado === 'Encerrado' ||
-        atendimentoAtualizado.status_detalhado === 'Sem direito/interesse'
-      ) {
-        await base44.entities.Atendimento.update(atendimentoAtualizado.id, {
-          ...atendimentoAtualizado,
-          status: 'Concluído',
-        });
-        queryClient.invalidateQueries({ queryKey: ['atendimentos'] });
-        closeDialog();
-        return;
-      }
-
-      if (atendimentoAtualizado.status_detalhado === 'Criar tarefa') {
-        closeDialog();
-        openConvertDialog(atendimentoAtualizado);
-        return;
-      }
-
-      closeDialog();
+    mutationFn: ({ id, data }) => flowdesk.entities.Atendimento.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['atendimentos'] }); closeDialog(); },
+    onError: (err) => { // ✅ mostra erro
+      setApiError(err?.message || 'Erro ao salvar alterações. Tente novamente.');
+      dialogScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Atendimento.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atendimentos'] });
-    },
+    mutationFn: (id) => flowdesk.entities.Atendimento.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['atendimentos'] }),
   });
 
   const concluirMutation = useMutation({
-    mutationFn: async (atendimento) => {
-      await base44.entities.Atendimento.update(atendimento.id, { status: 'Concluído' });
-      await base44.entities.Auditoria.create({
-        modulo: 'Atendimento',
-        tipo_acao: 'Alteração de Status',
-        registro_id: atendimento.id,
-        registro_nome: atendimento.cliente,
-        observacao_sistema: `Atendimento concluído manualmente: ${atendimento.cliente}`,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['atendimentos'] });
-    },
+    mutationFn: (id) => flowdesk.entities.Atendimento.update(id, { status: 'Concluído', status_detalhado: 'Encerrado' }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['atendimentos'] }),
   });
 
-  const converterEmTarefaMutation = useMutation({
-    mutationFn: async ({ atendimento, responsavel_id, data_vencimento, descricao }) => {
-      const novaTarefa = await createTaskFromAtendimento(atendimento, {
-        responsavel_id,
-        data_vencimento,
-        descricao,
-      });
-      return novaTarefa;
-    },
+  const createTarefaMutation = useMutation({
+    mutationFn: (data) => flowdesk.entities.Tarefa.create(data),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['atendimentos'] });
-      await queryClient.invalidateQueries({ queryKey: ['tarefas'] });
-      closeConvertDialog();
-      alert('✅ Tarefa criada com sucesso!');
-      navigate(createPageUrl('Tarefas'));
-    },
-    onError: (error) => {
-      alert('Erro: ' + (error?.message || 'Falha ao converter em tarefa.'));
+      if (convertItem) {
+        await flowdesk.entities.Atendimento.update(convertItem.id, { status: 'Concluído', status_detalhado: 'Encerrado' });
+        queryClient.invalidateQueries({ queryKey: ['atendimentos'] });
+      }
+      setIsConvertOpen(false);
+      setConvertItem(null);
     },
   });
 
-  const validateForm = () => {
-    const errors = {};
-    if (!formData.cliente?.trim()) errors.cliente = true;
-    if (!formData.qualificacao?.trim()) errors.qualificacao = true;
-    if (!formData.assunto?.trim()) errors.assunto = true;
-    if (!formData.data_chegada) errors.data_chegada = true;
-    if (!formData.data_atendimento) errors.data_atendimento = true;
-    if (!formData.observacoes?.trim()) errors.observacoes = true;
-    if (!formData.responsavel_id) errors.responsavel_id = true;
-    return errors;
-  };
+  const abertos = useMemo(() => {
+    const t = searchTerm.toLowerCase();
+
+    const filtrados = atendimentos
+      .filter(a => a.status !== 'Concluído')
+      .filter(a =>
+        !t ||
+        a.cliente?.toLowerCase().includes(t) ||
+        a.assunto?.toLowerCase().includes(t) ||
+        String(a.numero_caso || '').includes(t)
+      );
+
+    return ordenarAtendimentosPorNumero(filtrados);
+  }, [atendimentos, searchTerm]);
+
+  const concluidos = useMemo(() => {
+    const t = searchTerm.toLowerCase();
+
+    const filtrados = atendimentos
+      .filter(a => a.status === 'Concluído')
+      .filter(a =>
+        !t ||
+        a.cliente?.toLowerCase().includes(t) ||
+        a.assunto?.toLowerCase().includes(t) ||
+        String(a.numero_caso || '').includes(t)
+      );
+
+    return ordenarAtendimentosPorNumero(filtrados);
+  }, [atendimentos, searchTerm]);
+
+  const suggestions = useMemo(() => {
+    if (!clienteSearch || clienteSearch.length < 1) return [];
+    const t = clienteSearch.toLowerCase();
+    return clientes.filter(c =>
+      c.nome_completo?.toLowerCase().includes(t) || c.cpf?.includes(clienteSearch)
+    ).slice(0, 8);
+  }, [clientes, clienteSearch]);
+
+  const getPessoaNome = (id) => pessoas.find(p => p.id === id)?.nome || '-';
 
   const closeDialog = () => {
     setIsDialogOpen(false);
-    setFormErrors({});
     setEditingItem(null);
-    setSelectedCliente(null);
+    setFormData(EMPTY_FORM);
+    setFormErrors({});
+    setApiError('');
     setClienteSearch('');
-    setShowClienteSuggestions(false);
-    setFormData({
-      numero_caso: '',
-      cliente: '',
-      qualificacao: '',
-      assunto: '',
-      tipo_demanda: 'Outro',
-      descricao_demanda: '',
-      potencial: 'Médio',
-      status_detalhado: 'Em triagem',
-      tipo_atendimento: 'Presencial',
-      data_chegada: '',
-      data_atendimento: '',
-      observacoes: '',
-      motivo_encerramento: '',
-      ordem_prioridade: '',
-      responsavel_id: '',
-    });
+    setShowSuggestions(false);
   };
 
-  const openEditDialog = (item) => {
+  const openCreate = () => {
+    const numero = proximoNumeroDia(atendimentos);
+    const hoje = new Date().toISOString().split('T')[0];
+    setEditingItem(null);
+    setFormData({ ...EMPTY_FORM, numero_caso: numero, data_chegada: hoje });
+    setClienteSearch('');
+    setFormErrors({});
+    setApiError('');
+    setIsDialogOpen(true);
+  };
+
+  const openEdit = (item) => {
+    const clienteIdResolvido = item.cliente_id ||
+      clientes.find(c => c.nome_completo === item.cliente)?.id || '';
+
     setEditingItem(item);
     setFormData({
-      numero_caso: item.numero_caso || '',
+      numero_caso: String(item.numero_caso || ''), // ✅ sempre string
       cliente: item.cliente || '',
+      cliente_id: clienteIdResolvido,
       qualificacao: item.qualificacao || '',
       assunto: item.assunto || '',
-      tipo_demanda: item.tipo_demanda || 'Outro',
-      descricao_demanda: item.descricao_demanda || '',
       potencial: item.potencial || 'Médio',
       status_detalhado: item.status_detalhado || 'Em triagem',
       tipo_atendimento: item.tipo_atendimento || 'Presencial',
-      data_chegada: item.data_chegada ? item.data_chegada.split('T')[0] : '',
-      data_atendimento: item.data_atendimento ? item.data_atendimento.split('T')[0] : '',
+      data_chegada: item.data_chegada || '',
+      data_atendimento: item.data_atendimento || '',
       observacoes: item.observacoes || '',
       motivo_encerramento: item.motivo_encerramento || '',
-      ordem_prioridade: item.ordem_prioridade || '',
       responsavel_id: item.responsavel_id || '',
+      status: item.status || 'Aberto',
     });
-
     setClienteSearch(item.cliente || '');
-    syncSelectedClienteFromNome(item.cliente || '');
-    setShowClienteSuggestions(false);
+    setFormErrors({});
+    setApiError('');
     setIsDialogOpen(true);
   };
 
-  const openCreateDialog = () => {
-    closeDialog();
-    setIsDialogOpen(true);
+  const selecionarCliente = (c) => {
+    const qual = [
+      c.nome_completo,
+      c.cpf ? `CPF ${c.cpf}` : '',
+      c.rg ? `RG ${c.rg}` : '',
+      c.estado_civil || '',
+      c.nacionalidade || 'Brasileiro(a)',
+      c.profissao || '',
+      [c.endereco, c.cidade, c.estado].filter(Boolean).join(', '),
+    ].filter(Boolean).join(', ');
+    setFormData({ ...formData, cliente: c.nome_completo, cliente_id: c.id, qualificacao: qual });
+    setClienteSearch(c.nome_completo);
+    setShowSuggestions(false);
   };
 
-  const getDisplayTipoDemanda = (atendimento) => {
-    if (atendimento?.tipo_demanda === 'Outro' && atendimento?.descricao_demanda) {
-      return atendimento.descricao_demanda;
-    }
-    return atendimento?.tipo_demanda || '';
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.cliente) errors.cliente = 'Cliente é obrigatório';
+    if (!formData.assunto) errors.assunto = 'Assunto é obrigatório';
+    if (!formData.responsavel_id) errors.responsavel_id = 'Responsável é obrigatório';
+    if (!formData.observacoes) errors.observacoes = 'Observações são obrigatórias';
+    return errors;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
+    setApiError('');
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
+      dialogScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    setFormErrors({});
-
-    if (formData.tipo_demanda === 'Outro' && !formData.descricao_demanda?.trim()) {
-      alert('Por favor, preencha a Descrição da Demanda quando o tipo for "Outro".');
-      return;
-    }
-
     if (editingItem) {
       updateMutation.mutate({ id: editingItem.id, data: formData });
     } else {
@@ -489,45 +304,37 @@ export default function Atendimentos() {
     }
   };
 
-  const filteredAtendimentos = useMemo(() => {
-    return atendimentos
-      .filter((a) => {
-        const matchesSearch =
-          a.numero_caso?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.cliente?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          a.assunto?.toLowerCase().includes(searchTerm.toLowerCase());
+  const openConvert = (item) => {
+    setConvertItem(item);
+    setConvertForm({
+      titulo: `${item.cliente || ''} — ${item.assunto || ''}`,
+      descricao: item.observacoes || '',
+      responsavel_id: item.responsavel_id || '',
+      data_inicio: new Date().toISOString().split('T')[0],
+      data_vencimento: '',
+      status_detalhado: 'Pendente',
+      prioridade: 'Média',
+      observacoes: '',
+    });
+    setIsConvertOpen(true);
+  };
 
-        const matchesStatus = statusFilter === 'all' || a.status_detalhado === statusFilter;
-        return matchesSearch && matchesStatus;
-      })
-      .sort((a, b) => {
-        if (a.ordem_prioridade && b.ordem_prioridade) {
-          return a.ordem_prioridade - b.ordem_prioridade;
-        }
-        if (a.ordem_prioridade) return -1;
-        if (b.ordem_prioridade) return 1;
-        return 0;
-      });
-  }, [atendimentos, searchTerm, statusFilter]);
-
-  const emAberto = filteredAtendimentos.filter(
-    (a) => a.status !== 'Concluído' && a.status !== 'Convertido em tarefa'
-  );
-
-  const concluidos = filteredAtendimentos.filter(
-    (a) => a.status === 'Concluído' || a.status === 'Convertido em tarefa'
-  );
+  const handleConvertSubmit = (e) => {
+    e.preventDefault();
+    createTarefaMutation.mutate({
+      ...convertForm,
+      status: 'Em aberto',
+      origem: 'Atendimento',
+      atendimento_id: convertItem?.id || '',
+    });
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
-        <div className="mx-auto max-w-7xl space-y-6">
+        <div className="mx-auto max-w-7xl space-y-4">
           <Skeleton className="h-10 w-48" />
-          <div className="grid gap-4">
-            {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-24 rounded-2xl" />
-            ))}
-          </div>
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
       </div>
     );
@@ -536,663 +343,419 @@ export default function Atendimentos() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground md:text-3xl">Atendimentos</h1>
-            <p className="text-muted-foreground">Gerencie seus casos jurídicos</p>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Briefcase className="h-6 w-6 text-[#378ADD]" />
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Atendimentos</h1>
+              <p className="text-sm text-muted-foreground">{abertos.length} em aberto · {concluidos.length} concluídos</p>
+            </div>
           </div>
-          <Button
-            onClick={openCreateDialog}
-            className="bg-gradient-to-r from-stone-700 to-stone-800 hover:from-stone-800 hover:to-stone-900"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Atendimento
+          <Button onClick={openCreate} className="bg-[#378ADD] hover:bg-[#185FA5] text-white">
+            <Plus className="mr-2 h-4 w-4" />Novo Atendimento
           </Button>
         </div>
 
-        <div className="flex flex-col gap-4 md:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              placeholder="Buscar por número, cliente ou descrição..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-48">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Status</SelectItem>
-              <SelectItem value="Em triagem">Em triagem</SelectItem>
-              <SelectItem value="Em análise da Dra.">Em análise da Dra.</SelectItem>
-              <SelectItem value="Criar tarefa">Criar tarefa</SelectItem>
-              <SelectItem value="Encerrado">Encerrado</SelectItem>
-              <SelectItem value="Sem direito/interesse">Sem direito/interesse</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cliente, assunto, número..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
         </div>
 
-        <Tabs defaultValue="abertos" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="abertos">Em Aberto ({emAberto.length})</TabsTrigger>
+        <Tabs defaultValue="abertos">
+          <TabsList className="grid w-full max-w-sm grid-cols-2">
+            <TabsTrigger value="abertos">Em aberto ({abertos.length})</TabsTrigger>
             <TabsTrigger value="concluidos">Concluídos ({concluidos.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="abertos">
-            <div className="space-y-3">
-              <AnimatePresence>
-                {emAberto.map((atendimento, index) => {
-                  const diasRestantes = atendimento.prazo_final
-                    ? differenceInDays(parseISO(atendimento.prazo_final), new Date())
-                    : null;
-
-                  return (
-                    <motion.div
-                      key={atendimento.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="rounded-2xl border border-slate-200 bg-white p-4 transition-shadow hover:shadow-lg md:p-6"
-                    >
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-sm text-slate-500">{atendimento.numero_caso}</span>
-
-                            {atendimento.status && (
-                              <Badge className={`${statusBadgeColors[atendimento.status]} border font-semibold`}>
-                                {atendimento.status}
-                              </Badge>
-                            )}
-
-                            <Badge className={`${statusColors[atendimento.status_detalhado]} border`}>
-                              {atendimento.status_detalhado}
-                            </Badge>
-
-                            {diasRestantes !== null && diasRestantes <= 7 && diasRestantes >= 0 && (
-                              <Badge className="border border-amber-200 bg-amber-100 text-amber-700">
-                                {diasRestantes}d restantes
-                              </Badge>
-                            )}
-
-                            {diasRestantes !== null && diasRestantes < 0 && (
-                              <Badge className="border border-red-200 bg-red-100 text-red-700">
-                                {Math.abs(diasRestantes)}d atrasado
-                              </Badge>
-                            )}
-                          </div>
-
-                          <h3 className="text-lg font-semibold text-foreground">{atendimento.cliente}</h3>
-
-                          {atendimento.assunto && (
-                            <p className="line-clamp-2 text-muted-foreground">{atendimento.assunto}</p>
-                          )}
-
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                            {atendimento.data_atendimento && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                {format(parseISO(atendimento.data_atendimento), 'dd/MM/yyyy', { locale: ptBR })}
-                              </span>
-                            )}
-
-                            {atendimento.tipo_demanda && (
-                              <Badge variant="outline" className="text-xs">
-                                {getDisplayTipoDemanda(atendimento)}
-                              </Badge>
-                            )}
-
-                            {atendimento.potencial && (
-                              <Badge
-                                variant="outline"
-                                className={`text-xs ${
-                                  atendimento.potencial === 'Alto'
-                                    ? 'border-green-500 text-green-700'
-                                    : atendimento.potencial === 'Médio'
-                                    ? 'border-amber-500 text-amber-700'
-                                    : 'border-slate-500 text-slate-700'
-                                }`}
-                              >
-                                Potencial {atendimento.potencial}
-                              </Badge>
-                            )}
-
-                            {atendimento.responsavel_id ? (
-                              <Badge variant="outline" className="text-xs">
-                                Resp: {getPessoaNome(atendimento.responsavel_id)}
-                              </Badge>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(atendimento)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-
-                            {!atendimento.tarefa_criada_id && atendimento.status !== 'Convertido em tarefa' && (
-                              <DropdownMenuItem
-                                onClick={() => openConvertDialog(atendimento)}
-                                className="text-blue-600"
-                              >
-                                <ArrowRight className="mr-2 h-4 w-4" />
-                                Converter em Tarefa
-                              </DropdownMenuItem>
-                            )}
-
-                            {atendimento.status !== 'Concluído' && (
-                              <DropdownMenuItem
-                                onClick={() => concluirMutation.mutate(atendimento)}
-                                className="text-green-600"
-                              >
-                                <CheckCircle2 className="mr-2 h-4 w-4" />
-                                Concluir
-                              </DropdownMenuItem>
-                            )}
-
-                            <DropdownMenuItem
-                              onClick={() => deleteMutation.mutate(atendimento.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-
-              {emAberto.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Briefcase className="mb-4 h-12 w-12" />
-                  <p>Nenhum atendimento em aberto</p>
-                </div>
-              )}
-            </div>
+          <TabsContent value="abertos" className="mt-4 space-y-3">
+            {abertos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <Briefcase className="h-12 w-12 mb-4 opacity-30" />
+                <p>Nenhum atendimento em aberto</p>
+              </div>
+            ) : abertos.map(item => {
+              const clienteId = item.cliente_id || clientes.find(c => c.nome_completo === item.cliente)?.id;
+              return (
+                <AtendimentoCard
+                  key={item.id}
+                  item={item}
+                  getPessoaNome={getPessoaNome}
+                  onEdit={() => openEdit(item)}
+                  onDelete={() => { if (confirm('Excluir atendimento?')) deleteMutation.mutate(item.id); }}
+                  onConcluir={() => concluirMutation.mutate(item.id)}
+                  onConverter={() => openConvert(item)}
+                  onVerCliente={clienteId ? () => navigate(createPageUrl('ClienteDetalhe') + `?id=${clienteId}`) : null}
+                />
+              );
+            })}
           </TabsContent>
 
-          <TabsContent value="concluidos">
-            <div className="space-y-3">
-              <AnimatePresence>
-                {concluidos.map((atendimento, index) => {
-                  return (
-                    <motion.div
-                      key={atendimento.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      transition={{ delay: index * 0.05 }}
-                      className="rounded-2xl border border-border bg-card p-4 transition-shadow hover:shadow-lg md:p-6"
-                    >
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-mono text-sm text-muted-foreground">{atendimento.numero_caso}</span>
-
-                            {atendimento.status && (
-                              <Badge className={`${statusBadgeColors[atendimento.status]} border font-semibold`}>
-                                {atendimento.status}
-                              </Badge>
-                            )}
-
-                            <Badge className={`${statusColors[atendimento.status_detalhado]} border`}>
-                              {atendimento.status_detalhado}
-                            </Badge>
-                          </div>
-
-                          <h3 className="text-lg font-semibold text-foreground">{atendimento.cliente}</h3>
-
-                          {atendimento.assunto && (
-                            <p className="line-clamp-2 text-muted-foreground">{atendimento.assunto}</p>
-                          )}
-
-                          {atendimento.tipo_demanda && (
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
-                                {getDisplayTipoDemanda(atendimento)}
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditDialog(atendimento)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              onClick={() => deleteMutation.mutate(atendimento.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-
-              {concluidos.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                  <Briefcase className="mb-4 h-12 w-12" />
-                  <p>Nenhum atendimento concluído</p>
-                </div>
-              )}
-            </div>
+          <TabsContent value="concluidos" className="mt-4 space-y-3">
+            {concluidos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                <CheckCircle2 className="h-12 w-12 mb-4 opacity-30" />
+                <p>Nenhum atendimento concluído</p>
+              </div>
+            ) : concluidos.map(item => {
+              const clienteId = item.cliente_id || clientes.find(c => c.nome_completo === item.cliente)?.id;
+              return (
+                <AtendimentoCard
+                  key={item.id}
+                  item={item}
+                  concluido
+                  getPessoaNome={getPessoaNome}
+                  onEdit={() => openEdit(item)}
+                  onDelete={() => { if (confirm('Excluir atendimento?')) deleteMutation.mutate(item.id); }}
+                  onVerCliente={clienteId ? () => navigate(createPageUrl('ClienteDetalhe') + `?id=${clienteId}`) : null}
+                />
+              );
+            })}
           </TabsContent>
         </Tabs>
+      </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingItem ? 'Editar Atendimento' : 'Novo Atendimento'}</DialogTitle>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Ordem de Prioridade</Label>
-                <Input
-                  type="number"
-                  value={formData.ordem_prioridade}
-                  onChange={(e) => setFormData({ ...formData, ordem_prioridade: e.target.value })}
-                  placeholder="Ex: 1 (mais prioritário)"
-                />
-              </div>
-
-              {Object.keys(formErrors).length > 0 && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                  Preencha todos os campos obrigatórios antes de salvar o atendimento.
-                </div>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setIsDialogOpen(true); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" ref={dialogScrollRef}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {editingItem ? 'Editar Atendimento' : 'Novo Atendimento'}
+              {formData.numero_caso && (
+                <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
+                  <Hash className="h-3.5 w-3.5" />Nº {formData.numero_caso} do dia
+                </span>
               )}
+            </DialogTitle>
+          </DialogHeader>
 
-              <div className="space-y-2" ref={clienteInputRef}>
-                <Label>Cliente *</Label>
-                <div className="relative">
-                  <Input
-                    value={clienteSearch}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setClienteSearch(value);
-                      setFormData((prev) => ({ ...prev, cliente: value }));
-                      setSelectedCliente(null);
-                      setShowClienteSuggestions(true);
-                    }}
-                    onFocus={() => setShowClienteSuggestions(true)}
-                    placeholder="Digite nome, CPF, telefone ou e-mail do cliente"
-                    className={formErrors.cliente ? 'border-red-500' : ''}
-                  />
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
 
-                  {showClienteSuggestions && filteredClientesSuggestions.length > 0 && (
-                    <div className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-popover shadow-lg">
-                      {filteredClientesSuggestions.map((cliente) => (
-                        <button
-                          key={cliente.id}
-                          type="button"
-                          onClick={() => selectCliente(cliente)}
-                          className="flex w-full flex-col items-start gap-1 border-b border-border px-3 py-3 text-left hover:bg-muted/50 last:border-b-0"
-                        >
-                          <span className="font-medium text-foreground">{cliente.nome_completo || 'Sem nome'}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {[cliente.cpf, cliente.telefone, cliente.email].filter(Boolean).join(' • ') || 'Sem dados adicionais'}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            {/* ✅ banner de erro da API */}
+            {apiError && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 flex items-start gap-2 text-sm text-red-700">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <span>{apiError}</span>
+              </div>
+            )}
 
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedCliente ? (
-                    <>
-                      <Badge variant="outline" className="border-green-200 text-green-700">
-                        Cliente vinculado: {selectedCliente.nome_completo}
-                      </Badge>
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/ClienteDetalhe?id=${selectedCliente.id}`)}
-                      >
-                        <LinkIcon className="mr-2 h-3.5 w-3.5" />
-                        Abrir perfil
-                      </Button>
-
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedCliente(null);
-                          setClienteSearch(formData.cliente || '');
-                          setShowClienteSuggestions(true);
-                        }}
-                      >
-                        Alterar
-                      </Button>
-                    </>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Você pode selecionar um cliente existente ou digitar normalmente.
-                    </p>
-                  )}
+            {/* ✅ banner de validação */}
+            {Object.values(formErrors).some(Boolean) && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 flex items-start gap-2 text-sm text-red-700">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold mb-1">Preencha os campos obrigatórios:</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    {Object.values(formErrors).filter(Boolean).map((msg, i) => <li key={i}>{msg}</li>)}
+                  </ul>
                 </div>
               </div>
+            )}
 
-              <div className="space-y-2">
-                <Label>Qualificação (CPF, RG, etc) <span className="text-red-500">*</span></Label>
+            <div className="rounded-lg bg-[#EAF4FF] border border-[#BFDDF7] px-3 py-2 flex items-center gap-2">
+              <Hash className="h-4 w-4 text-[#378ADD]" />
+              <span className="text-sm text-[#185FA5] font-medium">
+                Atendimento nº <strong>{formData.numero_caso}</strong> do dia {new Date().toLocaleDateString('pt-BR')}
+              </span>
+            </div>
+
+            <div className="space-y-1 relative">
+              <Label>Cliente *</Label>
+              <div className="relative">
                 <Input
-                  value={formData.qualificacao}
-                  className={formErrors.qualificacao ? 'border-red-500' : ''}
-                  onChange={(e) => setFormData({ ...formData, qualificacao: e.target.value })}
-                  placeholder="Ex: CPF 123.456.789-00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Assunto <span className="text-red-500">*</span></Label>
-                <Textarea
-                  value={formData.assunto}
-                  className={formErrors.assunto ? 'border-red-500' : ''}
-                  onChange={(e) => setFormData({ ...formData, assunto: e.target.value })}
-                  placeholder="Descreva o assunto do atendimento..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Tipo de Demanda</Label>
-                  <Select
-                    value={formData.tipo_demanda}
-                    onValueChange={(value) =>
-                      setFormData({
-                        ...formData,
-                        tipo_demanda: value,
-                        descricao_demanda: value !== 'Outro' ? '' : formData.descricao_demanda,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Processo Judicial">Processo Judicial</SelectItem>
-                      <SelectItem value="Pedido Administrativo">Pedido Administrativo</SelectItem>
-                      <SelectItem value="Colher Documentos">Colher Documentos</SelectItem>
-                      <SelectItem value="Acompanhamento">Acompanhamento</SelectItem>
-                      <SelectItem value="Outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {formData.tipo_demanda === 'Outro' && (
-                    <div className="mt-2 space-y-1">
-                      <Label>
-                        Descrição da Demanda <span className="text-red-500">*</span>
-                      </Label>
-                      <Textarea
-                        value={formData.descricao_demanda}
-                        onChange={(e) => setFormData({ ...formData, descricao_demanda: e.target.value })}
-                        placeholder="Descreva o tipo de demanda específico..."
-                        rows={2}
-                      />
-                      {formData.descricao_demanda?.trim() && (
-                        <p className="text-xs text-slate-500">
-                          Exibição:{' '}
-                          <span className="font-semibold text-slate-700">
-                            {formData.descricao_demanda.trim()}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Potencial do Caso</Label>
-                  <Select
-                    value={formData.potencial}
-                    onValueChange={(value) => setFormData({ ...formData, potencial: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Alto">Alto</SelectItem>
-                      <SelectItem value="Médio">Médio</SelectItem>
-                      <SelectItem value="Baixo">Baixo</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Tipo de Atendimento</Label>
-                  <Select
-                    value={formData.tipo_atendimento}
-                    onValueChange={(value) => setFormData({ ...formData, tipo_atendimento: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Presencial">Presencial</SelectItem>
-                      <SelectItem value="Online">Online</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={formData.status_detalhado}
-                    onValueChange={(value) => setFormData({ ...formData, status_detalhado: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Em triagem">Em triagem</SelectItem>
-                      <SelectItem value="Em análise da Dra.">Em análise da Dra.</SelectItem>
-                      <SelectItem value="Criar tarefa">Criar tarefa</SelectItem>
-                      <SelectItem value="Encerrado">Encerrado</SelectItem>
-                      <SelectItem value="Sem direito/interesse">Sem direito/interesse</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Data de Chegada <span className="text-red-500">*</span></Label>
-                  <Input
-                    type="date"
-                    value={formData.data_chegada}
-                    className={formErrors.data_chegada ? 'border-red-500' : ''}
-                    onChange={(e) => setFormData({ ...formData, data_chegada: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Data de Atendimento <span className="text-red-500">*</span></Label>
-                  <Input
-                    type="date"
-                    value={formData.data_atendimento}
-                    className={formErrors.data_atendimento ? 'border-red-500' : ''}
-                    onChange={(e) => setFormData({ ...formData, data_atendimento: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Observações <span className="text-red-500">*</span></Label>
-                <Textarea
-                  value={formData.observacoes}
-                  className={formErrors.observacoes ? 'border-red-500' : ''}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  placeholder="Observações adicionais..."
-                  rows={2}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Responsável pelo Atendimento <span className="text-red-500">*</span></Label>
-                <Select
-                  value={formData.responsavel_id}
-                  onValueChange={(value) => setFormData({ ...formData, responsavel_id: value })}
-                >
-                  <SelectTrigger className={formErrors.responsavel_id ? 'border-red-500' : ''}>
-                    <SelectValue placeholder="Selecione o responsável..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pessoas.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {(formData.status_detalhado === 'Encerrado' ||
-                formData.status_detalhado === 'Sem direito/interesse') && (
-                <div className="space-y-2">
-                  <Label>Motivo do Encerramento</Label>
-                  <Textarea
-                    value={formData.motivo_encerramento}
-                    onChange={(e) => setFormData({ ...formData, motivo_encerramento: e.target.value })}
-                    placeholder="Descreva o motivo do encerramento..."
-                    rows={2}
-                  />
-                </div>
-              )}
-
-              <div className="flex justify-end gap-3 pt-4">
-                <Button type="button" variant="outline" onClick={closeDialog}>
-                  Cancelar
-                </Button>
-                <Button type="submit" className="bg-slate-900 hover:bg-slate-800">
-                  {editingItem ? 'Salvar' : 'Criar'}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={isConvertDialogOpen} onOpenChange={setIsConvertDialogOpen}>
-          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Converter em Tarefa</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              {convertAtendimento && (
-                <div className="rounded-xl border border-border bg-muted/40 p-3">
-                  <p className="text-sm text-foreground">
-                    <span className="font-semibold">Cliente:</span> {convertAtendimento.cliente}
-                  </p>
-                  {convertAtendimento.numero_caso ? (
-                    <p className="text-xs text-muted-foreground">
-                      <span className="font-semibold">Caso:</span> {convertAtendimento.numero_caso}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Responsável pela Execução *</Label>
-                <Select value={convertResponsavelId} onValueChange={setConvertResponsavelId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o responsável..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pessoas.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Data de Vencimento *</Label>
-                <Input
-                  type="date"
-                  value={convertDataVencimento}
-                  onChange={(e) => setConvertDataVencimento(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Descricao</Label>
-                <Textarea
-                  value={convertDescricao}
-                  onChange={(e) => setConvertDescricao(e.target.value)}
-                  placeholder="Descreva a tarefa..."
-                  rows={4}
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={closeConvertDialog}>
-                  Cancelar
-                </Button>
-
-                <Button
-                  type="button"
-                  className="bg-slate-900 hover:bg-slate-800"
-                  disabled={converterEmTarefaMutation.isPending}
-                  onClick={() => {
-                    if (!convertAtendimento) return;
-
-                    if (!convertResponsavelId || !convertDataVencimento) {
-                      alert('Responsavel e Data de Vencimento sao obrigatorios.');
-                      return;
-                    }
-
-                    converterEmTarefaMutation.mutate({
-                      atendimento: convertAtendimento,
-                      responsavel_id: convertResponsavelId,
-                      data_vencimento: convertDataVencimento,
-                      descricao: convertDescricao,
-                    });
+                  ref={clienteRef}
+                  value={clienteSearch}
+                  onChange={e => {
+                    setClienteSearch(e.target.value);
+                    setFormData({ ...formData, cliente: e.target.value, cliente_id: '', qualificacao: '' });
+                    setShowSuggestions(true);
+                    setFormErrors({ ...formErrors, cliente: '' });
                   }}
+                  onFocus={() => { if (clienteSearch) setShowSuggestions(true); }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  placeholder="Digite o nome ou CPF do cliente..."
+                  className={formErrors.cliente ? 'border-red-500' : ''}
+                  autoComplete="off"
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-border rounded-xl shadow-xl overflow-hidden">
+                    {suggestions.map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full text-left px-4 py-3 hover:bg-[#EAF4FF] transition-colors border-b border-border last:border-0"
+                        onMouseDown={() => selecionarCliente(c)}
+                      >
+                        <p className="text-sm font-semibold text-foreground">{c.nome_completo}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {c.cpf && <span className="font-mono">{c.cpf}</span>}
+                          {c.cidade && <span> · {c.cidade}/{c.estado}</span>}
+                          {c.telefone && <span> · {c.telefone}</span>}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {formErrors.cliente && <p className="text-xs text-red-500">{formErrors.cliente}</p>}
+
+              {formData.cliente_id && (
+                <button
+                  type="button"
+                  onClick={() => navigate(createPageUrl('ClienteDetalhe') + `?id=${formData.cliente_id}`)}
+                  className="flex items-center gap-1.5 text-xs text-[#378ADD] hover:text-[#185FA5] hover:underline mt-1 font-medium"
                 >
-                  {converterEmTarefaMutation.isPending ? 'Criando...' : 'Criar Tarefa'}
-                </Button>
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  Abrir perfil de {formData.cliente}
+                </button>
+              )}
+            </div>
+
+            {formData.qualificacao && (
+              <div className="space-y-1">
+                <Label>Qualificação <span className="text-xs text-muted-foreground">(preenchida automaticamente)</span></Label>
+                <Textarea rows={2} value={formData.qualificacao} onChange={e => setFormData({ ...formData, qualificacao: e.target.value })} className="text-xs text-muted-foreground" />
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <Label>Assunto *</Label>
+              <Textarea
+                rows={3}
+                value={formData.assunto}
+                onChange={e => { setFormData({ ...formData, assunto: e.target.value }); setFormErrors({ ...formErrors, assunto: '' }); }}
+                placeholder="Ex: Aposentadoria por invalidez, BPC/LOAS, revisão de benefício..."
+                className={formErrors.assunto ? 'border-red-500' : ''}
+              />
+              {formErrors.assunto && <p className="text-xs text-red-500">{formErrors.assunto}</p>}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label>Tipo de Atendimento</Label>
+                <Select value={formData.tipo_atendimento} onValueChange={v => setFormData({ ...formData, tipo_atendimento: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{TIPOS_ATENDIMENTO.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Potencial</Label>
+                <Select value={formData.potencial} onValueChange={v => setFormData({ ...formData, potencial: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{POTENCIAL.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Status</Label>
+                <Select value={formData.status_detalhado} onValueChange={v => setFormData({ ...formData, status_detalhado: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{STATUS_DETALHADO.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Responsável *</Label>
+                <Select value={formData.responsavel_id} onValueChange={v => { setFormData({ ...formData, responsavel_id: v }); setFormErrors({ ...formErrors, responsavel_id: '' }); }}>
+                  <SelectTrigger className={formErrors.responsavel_id ? 'border-red-500' : ''}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>{pessoas.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
+                </Select>
+                {formErrors.responsavel_id && <p className="text-xs text-red-500">{formErrors.responsavel_id}</p>}
+              </div>
+              <div className="space-y-1">
+                <Label>Data de Chegada</Label>
+                <Input type="date" value={formData.data_chegada} onChange={e => setFormData({ ...formData, data_chegada: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Data de Atendimento</Label>
+                <Input type="date" value={formData.data_atendimento} onChange={e => setFormData({ ...formData, data_atendimento: e.target.value })} />
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+
+            {/* ✅ sem .trim() para permitir espaços e quebras de linha */}
+            <div className="space-y-1">
+              <Label>Observações *</Label>
+              <Textarea
+                rows={4}
+                value={(formData.observacoes || '').replace(/<!--HIDDEN_FICHA:[\s\S]*?-->/g, '')}
+                onChange={e => { setFormData({ ...formData, observacoes: e.target.value }); setFormErrors({ ...formErrors, observacoes: '' }); }}
+                placeholder="Relato do atendimento, informações relevantes, próximos passos..."
+                className={formErrors.observacoes ? 'border-red-500' : ''}
+              />
+              {formErrors.observacoes && <p className="text-xs text-red-500">{formErrors.observacoes}</p>}
+            </div>
+
+            {(formData.status_detalhado === 'Encerrado' || formData.status_detalhado === 'Sem direito/interesse') && (
+              <div className="space-y-1">
+                <Label>Motivo do Encerramento</Label>
+                <Textarea rows={2} value={formData.motivo_encerramento} onChange={e => setFormData({ ...formData, motivo_encerramento: e.target.value })} placeholder="Descreva o motivo do encerramento..." />
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2 border-t border-border">
+              <Button type="button" variant="outline" onClick={closeDialog}>Cancelar</Button>
+              <Button type="submit" className="bg-[#378ADD] hover:bg-[#185FA5] text-white" disabled={createMutation.isPending || updateMutation.isPending}>
+                {(createMutation.isPending || updateMutation.isPending) ? 'Salvando...' : editingItem ? 'Salvar Alterações' : 'Criar Atendimento'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isConvertOpen} onOpenChange={setIsConvertOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Converter em Tarefa</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleConvertSubmit} className="space-y-4 pt-2">
+            <div className="rounded-xl bg-[#EAF4FF] border border-[#BFDDF7] px-3 py-2 text-xs text-[#185FA5]">
+              Atendimento nº <strong>{convertItem?.numero_caso}</strong> — <strong>{convertItem?.cliente}</strong> — {convertItem?.assunto}
+            </div>
+            <div className="space-y-1">
+              <Label>Título da Tarefa *</Label>
+              <Input required value={convertForm.titulo} onChange={e => setConvertForm({ ...convertForm, titulo: e.target.value })} />
+            </div>
+            <div className="space-y-1">
+              <Label>Descrição</Label>
+              <Textarea rows={3} value={convertForm.descricao} onChange={e => setConvertForm({ ...convertForm, descricao: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label>Data de Início</Label>
+                <Input type="date" value={convertForm.data_inicio} onChange={e => setConvertForm({ ...convertForm, data_inicio: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Prazo Fatal *</Label>
+                <Input required type="date" value={convertForm.data_vencimento} onChange={e => setConvertForm({ ...convertForm, data_vencimento: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label>Status da Tarefa</Label>
+                <Select value={convertForm.status_detalhado} onValueChange={v => setConvertForm({ ...convertForm, status_detalhado: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{STATUS_TAREFA.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Prioridade</Label>
+                <Select value={convertForm.prioridade} onValueChange={v => setConvertForm({ ...convertForm, prioridade: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{PRIORIDADE_TAREFA.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1 col-span-2">
+                <Label>Responsável pela Tarefa *</Label>
+                <Select value={convertForm.responsavel_id} onValueChange={v => setConvertForm({ ...convertForm, responsavel_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>{pessoas.map(p => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Observações</Label>
+              <Textarea rows={2} value={convertForm.observacoes} onChange={e => setConvertForm({ ...convertForm, observacoes: e.target.value })} />
+            </div>
+            <div className="flex justify-end gap-3 pt-2 border-t border-border">
+              <Button type="button" variant="outline" onClick={() => setIsConvertOpen(false)}>Cancelar</Button>
+              <Button type="submit" className="bg-[#378ADD] hover:bg-[#185FA5] text-white" disabled={createTarefaMutation.isPending}>
+                {createTarefaMutation.isPending ? 'Criando...' : 'Criar Tarefa e Concluir'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function AtendimentoCard({ item, concluido, getPessoaNome, onEdit, onDelete, onConcluir, onConverter, onVerCliente }) {
+  return (
+    <div
+      className={`rounded-xl border bg-card p-4 transition-all cursor-pointer ${
+        concluido ? 'opacity-70 border-border' : 'border-border hover:border-[#BFDDF7] hover:shadow-sm'
+      }`}
+      onClick={onEdit}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-2">
+            {item.numero_caso && (
+              <span className="flex items-center gap-1 text-xs font-bold text-[#378ADD] bg-[#EAF4FF] px-2 py-0.5 rounded-full">
+                <Hash className="h-3 w-3" />{item.numero_caso}
+              </span>
+            )}
+            <Badge className={`border text-xs ${STATUS_COLORS[item.status_detalhado] || 'bg-slate-100 text-slate-600'}`}>
+              {item.status_detalhado || item.status}
+            </Badge>
+            {item.potencial && (
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${POTENCIAL_COLORS[item.potencial] || ''}`}>
+                {item.potencial}
+              </span>
+            )}
+            {item.tipo_atendimento && (
+              <Badge variant="outline" className="text-xs">{item.tipo_atendimento}</Badge>
+            )}
+          </div>
+
+          <p className="font-bold text-foreground text-base">{item.cliente}</p>
+
+          {item.assunto && (
+            <p className="text-sm text-[#185FA5] font-semibold mt-1">{item.assunto}</p>
+          )}
+
+          <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+            {item.responsavel_id && (
+              <span className="flex items-center gap-1">
+                <User className="h-3 w-3" />{getPessoaNome(item.responsavel_id)}
+              </span>
+            )}
+            {(item.data_atendimento || item.data_chegada) && (
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {new Date((item.data_atendimento || item.data_chegada) + 'T00:00:00').toLocaleDateString('pt-BR')}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+          {onVerCliente && (
+            <Button
+              variant="ghost" size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-[#378ADD]"
+              title="Abrir perfil do cliente"
+              onClick={onVerCliente}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onEdit}>Ver / Editar</DropdownMenuItem>
+              {!concluido && onConverter && (
+                <DropdownMenuItem onClick={onConverter}>
+                  <ChevronRight className="mr-2 h-4 w-4 text-[#378ADD]" />
+                  Converter em tarefa
+                </DropdownMenuItem>
+              )}
+              {!concluido && onConcluir && (
+                <DropdownMenuItem onClick={onConcluir} className="text-emerald-600">
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Concluir atendimento
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={onDelete} className="text-red-600">
+                Excluir
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </div>
   );

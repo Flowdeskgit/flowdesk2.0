@@ -1,0 +1,75 @@
+{
+  "name": "AgendamentoINSSAdmin",
+  "type": "object",
+  "properties": {
+    "processo_id": {
+      "type": "string",
+      "description": "ID do processo vinculado"
+    },
+    "central_id": {
+      "type": "string",
+      "description": "ID da Central Administrativa"
+    },
+    "tipo_agendamento": {
+      "type": "string",
+      "enum": [
+        "Per\u00edcia m\u00e9dica",
+        "Avalia\u00e7\u00e3o social",
+        "Cumprimento de exig\u00eancia",
+        "Atendimento presencial",
+        "Entrega de documentos",
+        "Justifica\u00e7\u00e3o administrativa",
+        "Reabilita\u00e7\u00e3o profissional",
+        "Outro"
+      ]
+    },
+    "data_agendada": {
+      "type": "string",
+      "format": "date"
+    },
+    "hora_agendada": {
+      "type": "string"
+    },
+    "local_agendamento": {
+      "type": "string"
+    },
+    "unidade_inss": {
+      "type": "string"
+    },
+    "protocolo_relacionado": {
+      "type": "string"
+    },
+    "status_agendamento": {
+      "type": "string",
+      "enum": [
+        "Pendente",
+        "Agendado",
+        "Reagendado",
+        "Realizado",
+        "N\u00e3o compareceu",
+        "Cancelado"
+      ],
+      "default": "Pendente"
+    },
+    "resultado_agendamento": {
+      "type": "string"
+    },
+    "documentos_necessarios": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    },
+    "criado_por": {
+      "type": "string"
+    },
+    "atualizado_por": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "processo_id",
+    "tipo_agendamento",
+    "data_agendada"
+  ]
+}

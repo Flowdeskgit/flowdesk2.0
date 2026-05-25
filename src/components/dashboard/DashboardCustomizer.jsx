@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Settings2, X, GripVertical, Eye, EyeOff } from 'lucide-react';
+import { Settings2, GripVertical, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export const DEFAULT_WIDGETS = [
-  { id: 'tv', label: 'Painel TV / Relógio', enabled: true },
   { id: 'indicadores', label: 'Indicadores de Tarefas', enabled: true },
   { id: 'grafico', label: 'Gráfico de Tarefas', enabled: true },
   { id: 'audiencias', label: 'Audiências & Perícias', enabled: true },

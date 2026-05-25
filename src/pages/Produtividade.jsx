@@ -1,15 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Target, Calendar, BarChart3, User, TrendingUp, Zap, Medal, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { CheckCircle2, Target, Calendar, User, Zap, Medal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { format, isToday, parseISO, differenceInDays } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { isToday } from 'date-fns';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis } from 'recharts';
 import PodiumCard from '@/components/produtividade/PodiumCard';
 import ConquistaBadge, { CONQUISTAS } from '@/components/produtividade/ConquistaBadge';
@@ -22,12 +20,12 @@ const PERIODO_OPTS = [
 ];
 
 const LEVEL_CONFIG = [
-  { min: 0, label: 'Iniciante', color: 'text-slate-500', bg: 'bg-slate-100', icon: '🌱' },
-  { min: 10, label: 'Aprendiz', color: 'text-blue-600', bg: 'bg-blue-100', icon: '📘' },
-  { min: 25, label: 'Praticante', color: 'text-green-600', bg: 'bg-green-100', icon: '⚡' },
-  { min: 50, label: 'Especialista', color: 'text-purple-600', bg: 'bg-purple-100', icon: '🔮' },
-  { min: 100, label: 'Expert', color: 'text-orange-600', bg: 'bg-orange-100', icon: '🔥' },
-  { min: 200, label: 'Mestre', color: 'text-rose-600', bg: 'bg-rose-100', icon: '👑' },
+  { min: 0,   label: 'Iniciante',   color: 'text-slate-500',    bg: 'bg-slate-100',    icon: '🌱' },
+  { min: 10,  label: 'Aprendiz',    color: 'text-blue-600',     bg: 'bg-blue-100',     icon: '📘' },
+  { min: 25,  label: 'Praticante',  color: 'text-green-600',    bg: 'bg-green-100',    icon: '⚡' },
+  { min: 50,  label: 'Especialista',color: 'text-purple-600',   bg: 'bg-purple-100',   icon: '🔮' },
+  { min: 100, label: 'Expert',      color: 'text-orange-600',   bg: 'bg-orange-100',   icon: '🔥' },
+  { min: 200, label: 'Mestre',      color: 'text-[#185FA5]',    bg: 'bg-[#EAF4FF]',   icon: '👑' },
 ];
 
 function getLevel(pontos) {
@@ -57,9 +55,7 @@ function useFiltro(periodo) {
 function calcStats(pessoaId, { tarefas, atendimentos, agenda, processosAdmin }, filtro) {
   const isMe = (id) => id === pessoaId;
 
-  const tf = tarefas.filter(t =>
-    (isMe(t.created_by) || isMe(t.responsavel_id)) && filtro(t)
-  );
+  const tf = tarefas.filter(t => (isMe(t.created_by) || isMe(t.responsavel_id)) && filtro(t));
   const tarefasConcluidas = tf.filter(t => t.status === 'Concluída').length;
   const tarefasCriadas = tarefas.filter(t => isMe(t.created_by) && filtro(t)).length;
   const tarefasDelegadas = tf.filter(t => !isMe(t.created_by) && isMe(t.responsavel_id)).length;
@@ -93,7 +89,7 @@ function Avatar({ nome, foto, size = 'md' }) {
   const cls = size === 'lg' ? 'h-16 w-16 text-2xl' : size === 'sm' ? 'h-8 w-8 text-sm' : 'h-10 w-10 text-base';
   if (foto) return <img src={foto} alt={nome} className={`${cls} rounded-full object-cover border-2 border-white`} />;
   return (
-    <div className={`${cls} rounded-full bg-gradient-to-br from-rose-500 to-pink-600 text-white font-bold flex items-center justify-center border-2 border-white flex-shrink-0`}>
+    <div className={`${cls} rounded-full bg-gradient-to-br from-[#378ADD] to-[#185FA5] text-white font-bold flex items-center justify-center border-2 border-white flex-shrink-0`}>
       {nome?.charAt(0).toUpperCase() || '?'}
     </div>
   );
@@ -122,11 +118,11 @@ export default function Produtividade() {
   const [periodo, setPeriodo] = useState('30dias');
   const [selectedPessoa, setSelectedPessoa] = useState(null);
 
-  const { data: pessoas = [] } = useQuery({ queryKey: ['pessoas'], queryFn: () => base44.entities.Pessoa.list() });
-  const { data: tarefas = [] } = useQuery({ queryKey: ['tarefas'], queryFn: () => base44.entities.Tarefa.list('-created_date', 500) });
-  const { data: atendimentos = [] } = useQuery({ queryKey: ['atendimentos'], queryFn: () => base44.entities.Atendimento.list('-created_date', 500) });
-  const { data: agenda = [] } = useQuery({ queryKey: ['agenda'], queryFn: () => base44.entities.Agenda.list('-created_date', 500) });
-  const { data: processosAdmin = [] } = useQuery({ queryKey: ['andamento-administrativo'], queryFn: () => base44.entities.AndamentoAdministrativo.list('-created_date', 500) });
+  const { data: pessoas = [] } = useQuery({ queryKey: ['pessoas'], queryFn: () => flowdesk.entities.Pessoa.list() });
+  const { data: tarefas = [] } = useQuery({ queryKey: ['tarefas'], queryFn: () => flowdesk.entities.Tarefa.list('-created_date', 500) });
+  const { data: atendimentos = [] } = useQuery({ queryKey: ['atendimentos'], queryFn: () => flowdesk.entities.Atendimento.list('-created_date', 500) });
+  const { data: agenda = [] } = useQuery({ queryKey: ['agenda'], queryFn: () => flowdesk.entities.Agenda.list('-created_date', 500) });
+  const { data: processosAdmin = [] } = useQuery({ queryKey: ['andamento-administrativo'], queryFn: () => flowdesk.entities.AndamentoAdministrativo.list('-created_date', 500) });
 
   const filtro = useFiltro(periodo);
   const data = { tarefas, atendimentos, agenda, processosAdmin };
@@ -228,7 +224,9 @@ export default function Produtividade() {
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.04 }}
-                  className={`bg-white rounded-xl border border-slate-200 p-4 cursor-pointer hover:border-rose-300 hover:shadow-md transition-all ${selectedPessoa === r.pessoa.id ? 'border-rose-400 ring-1 ring-rose-300' : ''}`}
+                  className={`bg-white rounded-xl border border-slate-200 p-4 cursor-pointer hover:border-[#BFDDF7] hover:shadow-md transition-all ${
+                    selectedPessoa === r.pessoa.id ? 'border-[#378ADD] ring-1 ring-[#BFDDF7]' : ''
+                  }`}
                   onClick={() => setSelectedPessoa(selectedPessoa === r.pessoa.id ? null : r.pessoa.id)}
                 >
                   <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
@@ -249,7 +247,9 @@ export default function Produtividade() {
                       <p className="text-xs text-slate-500">{r.pessoa.cargo}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Progress value={progressToNext} className="h-1.5 flex-1" />
-                        <span className="text-[10px] text-slate-400">{nextLevel ? `${nextLevel.min - r.pontos}pts para ${nextLevel.label}` : 'Nível máximo!'}</span>
+                        <span className="text-[10px] text-slate-400">
+                          {nextLevel ? `${nextLevel.min - r.pontos}pts para ${nextLevel.label}` : 'Nível máximo!'}
+                        </span>
                       </div>
                     </div>
 
@@ -290,7 +290,7 @@ export default function Produtividade() {
                 <XAxis dataKey="nome" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Bar dataKey="Pontos" fill="#f43f5e" radius={[4,4,0,0]} />
+                <Bar dataKey="Pontos" fill="#378ADD" radius={[4,4,0,0]} />
                 <Bar dataKey="Tarefas" fill="#22c55e" radius={[4,4,0,0]} />
                 <Bar dataKey="Atendimentos" fill="#3b82f6" radius={[4,4,0,0]} />
               </BarChart>
@@ -369,7 +369,7 @@ export default function Produtividade() {
                   <RadarChart data={radarData}>
                     <PolarGrid />
                     <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11 }} />
-                    <Radar dataKey="value" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.3} />
+                    <Radar dataKey="value" stroke="#378ADD" fill="#378ADD" fillOpacity={0.3} />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
@@ -378,11 +378,7 @@ export default function Produtividade() {
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">🏅 Conquistas</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {CONQUISTAS.map(c => (
-                    <ConquistaBadge
-                      key={c.id}
-                      conquista={c}
-                      desbloqueada={c.req(detalhe)}
-                    />
+                    <ConquistaBadge key={c.id} conquista={c} desbloqueada={c.req(detalhe)} />
                   ))}
                 </div>
               </div>

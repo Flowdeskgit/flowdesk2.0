@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
-import { useCurrentUser, userLabel, historyEntry } from '@/hooks/useCurrentUser';
+import { flowdesk } from '@/api/flowdeskClient';
+import { useCurrentUser, userLabel } from '@/hooks/useCurrentUser';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -21,6 +21,10 @@ import {
   Paperclip,
   Upload,
   X,
+  GitBranch,
+  ExternalLink,
+  ArrowRight,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,8 +46,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Link } from 'react-router-dom';
+import EncaminharTarefaModal from '@/components/tarefas/EncaminharTarefaModal';
 
 const statusConfig = {
+  Urgente: { color: 'bg-purple-100 text-purple-800 border-purple-500', icon: AlertTriangle },
   Pendente: { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Circle },
   'Em andamento': { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: Play },
   Atrasada: { color: 'bg-red-100 text-red-700 border-red-200', icon: AlertTriangle },
@@ -63,18 +70,23 @@ export default function Tarefas() {
   const [responsavelFilter, setResponsavelFilter] = useState('all');
   const [dataInicioFilter, setDataInicioFilter] = useState('');
   const [dataVencimentoFilter, setDataVencimentoFilter] = useState('');
+  const [kanbanFilter, setKanbanFilter] = useState('todas');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [encaminharTarefa, setEncaminharTarefa] = useState(null);
 
   const [formData, setFormData] = useState({
     titulo: '',
     descricao: '',
     atendimento_id: '',
+    cliente_id: '',
+    cliente_nome: '',
     responsavel_id: '',
     data_inicio: '',
     data_vencimento: '',
-    status: 'Pendente',
+    status: 'Em aberto',
+    status_detalhado: 'Pendente',
     prioridade: 'Média',
     observacoes: '',
     motivo_atraso: '',
@@ -87,23 +99,49 @@ export default function Tarefas() {
   const queryClient = useQueryClient();
 
   const createNotification = useMutation({
-    mutationFn: (data) => base44.entities.Notificacao.create(data),
+    mutationFn: (data) => flowdesk.entities.Notificacao.create(data),
   });
 
   const { data: tarefas = [], isLoading } = useQuery({
     queryKey: ['tarefas'],
-    queryFn: () => base44.entities.Tarefa.list('-created_date'),
+    queryFn: () => flowdesk.entities.Tarefa.list('-created_date'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const { data: atendimentos = [] } = useQuery({
     queryKey: ['atendimentos'],
-    queryFn: () => base44.entities.Atendimento.list(),
+    queryFn: () => flowdesk.entities.Atendimento.list(),
   });
+
+  const { data: clientes = [] } = useQuery({
+    queryKey: ['clientes'],
+    queryFn: () => flowdesk.entities.Cliente.list(),
+  });
+
+  // Helper: tarefa não tem responsável válido
+  const semResponsavelValido = (t) =>
+    !t.responsavel_id || !pessoas.find((p) => p.id === t.responsavel_id);
+
+  const getClienteInfo = (tarefa) => {
+    if (tarefa.cliente_id) {
+      const c = clientes.find((c) => c.id === tarefa.cliente_id);
+      if (c) return { id: c.id, nome: c.nome_completo };
+    }
+    if (tarefa.cliente_nome) return { id: tarefa.cliente_id || null, nome: tarefa.cliente_nome };
+    if (tarefa.atendimento_id) {
+      const at = atendimentos.find((a) => a.id === tarefa.atendimento_id);
+      if (at) {
+        const c = clientes.find((c) => c.nome_completo === at.cliente);
+        if (c) return { id: c.id, nome: c.nome_completo };
+        if (at.cliente) return { id: null, nome: at.cliente };
+      }
+    }
+    return null;
+  };
 
   const getPessoaNome = (id) => {
     const pessoa = pessoas.find((p) => p.id === id);
@@ -112,21 +150,16 @@ export default function Tarefas() {
 
   const notifyDoctorIfLate = (tarefa) => {
     if (!tarefa?.data_vencimento) return;
-
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-
     const vencimento = new Date(tarefa.data_vencimento);
     vencimento.setHours(0, 0, 0, 0);
-
     if (vencimento < hoje && tarefa.status !== 'Concluída') {
       createNotification.mutate({
         titulo: '⚠️ Tarefa Atrasada',
-        mensagem: `Tarefa atrasada: "${tarefa.titulo}" - Responsável: ${getPessoaNome(
-          tarefa.responsavel_id
-        )}`,
+        mensagem: `Tarefa atrasada: "${tarefa.titulo}" - Responsável: ${getPessoaNome(tarefa.responsavel_id)}`,
         tipo: 'tarefa_atrasada',
-        usuario_id: 'dra', // será filtrado para o admin
+        usuario_id: 'dra',
         tarefa_id: tarefa.id,
         lida: false,
       });
@@ -140,10 +173,13 @@ export default function Tarefas() {
       titulo: '',
       descricao: '',
       atendimento_id: '',
+      cliente_id: '',
+      cliente_nome: '',
       responsavel_id: '',
       data_inicio: '',
       data_vencimento: '',
-      status: 'Pendente',
+      status: 'Em aberto',
+      status_detalhado: 'Pendente',
       prioridade: 'Média',
       observacoes: '',
       motivo_atraso: '',
@@ -174,10 +210,9 @@ export default function Tarefas() {
         historico_autoria: [...prevHistory, `[${ts}] ${actionLabel} por ${label}`],
         ...(data.status === 'Concluída' ? { concluido_por_email: currentUser?.email || '' } : {}),
       };
-      return base44.entities.Tarefa.update(id, enriched);
+      return flowdesk.entities.Tarefa.update(id, enriched);
     },
     onSuccess: (tarefaAtualizada, { data: dataAtualizada }) => {
-      // Validar retorno executivo em conclusão
       if (
         (dataAtualizada.status === 'Concluída' ||
           dataAtualizada.status === 'Não realizada / Impedimento') &&
@@ -189,7 +224,6 @@ export default function Tarefas() {
 
       queryClient.invalidateQueries({ queryKey: ['tarefas'] });
 
-      // Notificar transferência
       if (
         dataAtualizada.transferido_para &&
         editingItem &&
@@ -205,7 +239,6 @@ export default function Tarefas() {
         });
       }
 
-      // Notificar menções
       if (dataAtualizada.mencoes && Array.isArray(dataAtualizada.mencoes)) {
         dataAtualizada.mencoes.forEach((usuarioId) => {
           if (!editingItem?.mencoes?.includes(usuarioId)) {
@@ -221,38 +254,40 @@ export default function Tarefas() {
         });
       }
 
-      // Notificar quando tarefa ficar atrasada
       notifyDoctorIfLate(tarefaAtualizada);
-
       closeDialog();
     },
   });
 
-  // Atualizar automaticamente tarefas atrasadas
   React.useEffect(() => {
     if (!tarefas || tarefas.length === 0) return;
-
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
 
     tarefas.forEach((tarefa) => {
-      if (tarefa.data_vencimento && tarefa.status !== 'Concluída' && tarefa.status !== 'Atrasada') {
+      if (tarefa.status === 'Concluída' || tarefa.status === 'Não realizada / Impedimento') {
+        if (tarefa.status_detalhado !== 'Concluída') {
+          updateMutation.mutate({ id: tarefa.id, data: { ...tarefa, status_detalhado: 'Concluída' } });
+        }
+        return;
+      }
+      if (tarefa.status_detalhado === 'Atrasada') return;
+      if (tarefa.data_vencimento) {
         const dataVencimento = new Date(tarefa.data_vencimento);
         dataVencimento.setHours(0, 0, 0, 0);
-
         if (dataVencimento < hoje) {
-          updateMutation.mutate({ id: tarefa.id, data: { ...tarefa, status: 'Atrasada' } });
+          updateMutation.mutate({ id: tarefa.id, data: { ...tarefa, status_detalhado: 'Atrasada' } });
         }
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [tarefas]);
 
   const createMutation = useMutation({
     mutationFn: (data) => {
       const label = userLabel(currentUser);
       const ts = new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-      return base44.entities.Tarefa.create({
+      return flowdesk.entities.Tarefa.create({
         ...data,
         criado_por_email: currentUser?.email || '',
         editado_por_email: currentUser?.email || '',
@@ -261,7 +296,6 @@ export default function Tarefas() {
     },
     onSuccess: (novaTarefa) => {
       queryClient.invalidateQueries({ queryKey: ['tarefas'] });
-
       if (novaTarefa.responsavel_id) {
         createNotification.mutate({
           titulo: '📋 Nova Tarefa Atribuída',
@@ -272,13 +306,12 @@ export default function Tarefas() {
           lida: false,
         });
       }
-
       closeDialog();
     },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Tarefa.delete(id),
+    mutationFn: (id) => flowdesk.entities.Tarefa.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tarefas'] });
     },
@@ -287,19 +320,16 @@ export default function Tarefas() {
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-
     setUploadingFiles(true);
     const uploadedUrls = [];
-
     for (const file of files) {
       try {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const { file_url } = await flowdesk.integrations.Core.UploadFile({ file });
         uploadedUrls.push(file_url);
       } catch (error) {
         console.error('Erro ao fazer upload:', error);
       }
     }
-
     setFormData((prev) => ({
       ...prev,
       anexos: [...(prev.anexos || []), ...uploadedUrls],
@@ -320,10 +350,13 @@ export default function Tarefas() {
       titulo: item.titulo || '',
       descricao: item.descricao || '',
       atendimento_id: item.atendimento_id || '',
+      cliente_id: item.cliente_id || '',
+      cliente_nome: item.cliente_nome || '',
       responsavel_id: item.responsavel_id || '',
       data_inicio: item.data_inicio || '',
       data_vencimento: item.data_vencimento || '',
-      status: item.status || 'Pendente',
+      status: item.status || 'Em aberto',
+      status_detalhado: item.status_detalhado || item.status || 'Pendente',
       prioridade: item.prioridade || 'Média',
       observacoes: item.observacoes || '',
       motivo_atraso: item.motivo_atraso || '',
@@ -337,33 +370,39 @@ export default function Tarefas() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Validar campos obrigatórios
     if (!formData.responsavel_id || !formData.data_vencimento) {
       alert('Responsável e Data de Vencimento são obrigatórios');
       return;
     }
-
-    // Validar motivo de atraso se status for Atrasada
-    if (formData.status === 'Atrasada' && !String(formData.motivo_atraso || '').trim()) {
+    const sd = formData.status_detalhado || formData.status || '';
+    if (sd === 'Atrasada' && !String(formData.motivo_atraso || '').trim()) {
       alert('Motivo do Atraso é obrigatório para tarefas atrasadas');
       return;
     }
-
-    // Validar retorno executivo se conclusão
     if (
-      (formData.status === 'Concluída' || formData.status === 'Não realizada / Impedimento') &&
+      (sd === 'Concluída' || sd === 'Não realizada / Impedimento') &&
       !formData.retorno_executivo
     ) {
       alert('Retorno Executivo é obrigatório para conclusão da tarefa');
       return;
     }
-
     if (editingItem) {
       updateMutation.mutate({ id: editingItem.id, data: formData });
     } else {
       createMutation.mutate(formData);
     }
+  };
+
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const hojeStr = hoje.toISOString().split('T')[0];
+  const semanaStr = new Date(hoje.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const isConcluida = (t) => t.status === 'Concluída' || t.status === 'Não realizada / Impedimento';
+
+  const getStatusEfetivo = (t) => {
+    if (isConcluida(t)) return 'Concluída';
+    return t.status_detalhado || 'Pendente';
   };
 
   const filteredTarefas = (tarefas || []).filter((t) => {
@@ -372,28 +411,46 @@ export default function Tarefas() {
       (t.descricao || '').toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesPrioridade = prioridadeFilter === 'all' || t.prioridade === prioridadeFilter;
+
     const matchesResponsavel =
-      responsavelFilter === 'all' || t.responsavel_id === responsavelFilter;
+      responsavelFilter === 'all'
+        ? true
+        : responsavelFilter === 'sem_responsavel'
+        ? semResponsavelValido(t)
+        : t.responsavel_id === responsavelFilter;
 
     const matchesDataInicio = !dataInicioFilter || (t.data_inicio && t.data_inicio >= dataInicioFilter);
     const matchesDataVencimento =
       !dataVencimentoFilter || (t.data_vencimento && t.data_vencimento <= dataVencimentoFilter);
+
+    const statusEfetivo = getStatusEfetivo(t);
+    let matchesKanban = true;
+    if (kanbanFilter === 'urgentes') matchesKanban = statusEfetivo === 'Urgente';
+    else if (kanbanFilter === 'atrasadas') matchesKanban = statusEfetivo === 'Atrasada';
+    else if (kanbanFilter === 'vence_hoje') matchesKanban = t.data_vencimento === hojeStr && !isConcluida(t);
+    else if (kanbanFilter === 'vence_semana') matchesKanban = t.data_vencimento >= hojeStr && t.data_vencimento <= semanaStr && !isConcluida(t);
+    else if (kanbanFilter === 'alta_prioridade') matchesKanban = t.prioridade === 'Alta' && !isConcluida(t);
+    else if (kanbanFilter === 'pendentes') matchesKanban = statusEfetivo === 'Pendente';
+    else if (kanbanFilter === 'em_andamento') matchesKanban = statusEfetivo === 'Em andamento';
+    else if (kanbanFilter === 'concluidas') matchesKanban = statusEfetivo === 'Concluída';
+    else if (kanbanFilter === 'sem_responsavel') matchesKanban = semResponsavelValido(t) && !isConcluida(t);
 
     return (
       matchesSearch &&
       matchesPrioridade &&
       matchesResponsavel &&
       matchesDataInicio &&
-      matchesDataVencimento
+      matchesDataVencimento &&
+      matchesKanban
     );
   });
 
-  // Agrupar tarefas por status para layout de colunas
   const tarefasPorStatus = {
-    Pendente: filteredTarefas.filter((t) => t.status === 'Pendente'),
-    'Em andamento': filteredTarefas.filter((t) => t.status === 'Em andamento'),
-    Atrasada: filteredTarefas.filter((t) => t.status === 'Atrasada'),
-    Concluída: filteredTarefas.filter((t) => t.status === 'Concluída'),
+    Urgente: filteredTarefas.filter((t) => getStatusEfetivo(t) === 'Urgente'),
+    Pendente: filteredTarefas.filter((t) => getStatusEfetivo(t) === 'Pendente'),
+    'Em andamento': filteredTarefas.filter((t) => getStatusEfetivo(t) === 'Em andamento'),
+    Atrasada: filteredTarefas.filter((t) => getStatusEfetivo(t) === 'Atrasada'),
+    Concluída: filteredTarefas.filter((t) => getStatusEfetivo(t) === 'Concluída'),
   };
 
   if (isLoading) {
@@ -420,7 +477,6 @@ export default function Tarefas() {
             <h1 className="text-2xl font-bold text-foreground md:text-3xl">Tarefas</h1>
             <p className="text-muted-foreground">Gerencie suas atividades</p>
           </div>
-
           <Button
             onClick={() => setIsDialogOpen(true)}
             className="bg-gradient-to-r from-stone-700 to-stone-800 hover:from-stone-800 hover:to-stone-900"
@@ -461,6 +517,7 @@ export default function Tarefas() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="sem_responsavel">👤 Sem Responsável</SelectItem>
                 {pessoas.map((pessoa) => (
                   <SelectItem key={pessoa.id} value={pessoa.id}>
                     {pessoa.nome}
@@ -480,7 +537,6 @@ export default function Tarefas() {
                 className="w-full"
               />
             </div>
-
             <div className="flex-1 space-y-1">
               <Label className="text-xs text-slate-600">Data Vencimento (até)</Label>
               <Input
@@ -490,7 +546,6 @@ export default function Tarefas() {
                 className="w-full"
               />
             </div>
-
             {(dataInicioFilter || dataVencimentoFilter) && (
               <Button
                 variant="outline"
@@ -505,15 +560,44 @@ export default function Tarefas() {
           </div>
         </div>
 
-        {/* Kanban Board - Colunas lado a lado */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Filtros rápidos Kanban */}
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: 'todas', label: 'Todas' },
+            { value: 'urgentes', label: '⚡ Urgentes' },
+            { value: 'atrasadas', label: '⚠️ Atrasadas' },
+            { value: 'vence_hoje', label: '📅 Vence Hoje' },
+            { value: 'vence_semana', label: '🗓️ Vence essa semana' },
+            { value: 'alta_prioridade', label: '🔴 Alta Prioridade' },
+            { value: 'pendentes', label: 'Pendentes' },
+            { value: 'em_andamento', label: 'Em andamento' },
+            { value: 'concluidas', label: '✅ Concluídas' },
+            { value: 'sem_responsavel', label: '👤 Sem Responsável' },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setKanbanFilter(opt.value)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-all ${
+                kanbanFilter === opt.value
+                  ? 'bg-slate-800 text-white border-slate-800'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Kanban Board */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
           {Object.entries(tarefasPorStatus).map(([status, tarefasDoStatus]) => {
-            const StatusIcon = statusConfig[status]?.icon || Circle;
+            const StatusIcon = status === 'Urgente' ? Zap : (statusConfig[status]?.icon || Circle);
+            const isUrgente = status === 'Urgente';
 
             return (
               <div key={status} className="flex flex-col">
                 <div
-                  className={`rounded-t-2xl p-4 ${statusConfig[status]?.color} border-2`}
+                  className={`rounded-t-2xl p-4 ${statusConfig[status]?.color} border-2 ${isUrgente ? 'shadow-lg shadow-purple-200' : ''}`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -524,7 +608,7 @@ export default function Tarefas() {
                   </div>
                 </div>
 
-                <div className="min-h-[200px] space-y-3 rounded-b-2xl bg-muted/30 p-2">
+                <div className={`min-h-[200px] space-y-3 rounded-b-2xl p-2 ${isUrgente ? 'bg-purple-50/60' : 'bg-muted/30'}`}>
                   <AnimatePresence>
                     {tarefasDoStatus.map((tarefa, index) => {
                       const diasRestantes = tarefa.data_vencimento
@@ -548,31 +632,37 @@ export default function Tarefas() {
                               </h4>
 
                               <DropdownMenu>
-                                <DropdownMenuTrigger
-                                  asChild
-                                  onClick={(e) => e.stopPropagation()}
-                                >
+                                <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                                   <Button variant="ghost" size="icon" className="h-6 w-6">
                                     <MoreVertical className="h-3 w-3" />
                                   </Button>
                                 </DropdownMenuTrigger>
-
                                 <DropdownMenuContent align="end">
                                   <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openEditDialog(tarefa);
-                                    }}
+                                    onClick={(e) => { e.stopPropagation(); openEditDialog(tarefa); }}
                                   >
                                     <Edit className="mr-2 h-4 w-4" />
                                     Editar
                                   </DropdownMenuItem>
-
                                   <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      deleteMutation.mutate(tarefa.id);
-                                    }}
+                                    onClick={(e) => { e.stopPropagation(); setEncaminharTarefa(tarefa); }}
+                                  >
+                                    <GitBranch className="mr-2 h-4 w-4 text-rose-500" />
+                                    Encaminhar como nova tarefa
+                                  </DropdownMenuItem>
+                                  {(() => {
+                                    const cli = getClienteInfo(tarefa);
+                                    return cli?.id ? (
+                                      <DropdownMenuItem asChild>
+                                        <Link to={`/ClienteDetalhe?id=${cli.id}`} onClick={(e) => e.stopPropagation()}>
+                                          <ExternalLink className="mr-2 h-4 w-4 text-blue-500" />
+                                          Ver Ficha do Cliente
+                                        </Link>
+                                      </DropdownMenuItem>
+                                    ) : null;
+                                  })()}
+                                  <DropdownMenuItem
+                                    onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(tarefa.id); }}
                                     className="text-red-600"
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -588,19 +678,60 @@ export default function Tarefas() {
                               </p>
                             )}
 
+                            {/* Sugestão urgente */}
+                            {(() => {
+                              const sd = tarefa.status_detalhado || tarefa.status || '';
+                              if (sd === 'Urgente' || sd === 'Concluída') return null;
+                              if (!tarefa.data_vencimento) return null;
+                              const diffMs = new Date(tarefa.data_vencimento).setHours(23,59,59,0) - Date.now();
+                              if (diffMs > 0 && diffMs < 24 * 60 * 60 * 1000) {
+                                return (
+                                  <button
+                                    className="w-full text-left text-[10px] font-semibold text-purple-700 bg-purple-50 border border-purple-300 rounded px-2 py-1 flex items-center gap-1 hover:bg-purple-100 transition-colors"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateMutation.mutate({ id: tarefa.id, data: { ...tarefa, status_detalhado: 'Urgente' } });
+                                    }}
+                                  >
+                                    <Zap className="h-3 w-3 flex-shrink-0" />
+                                    Vence hoje — marcar como Urgente?
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
+
+                            {/* Badge sem responsável */}
+                            {semResponsavelValido(tarefa) && (
+                              <p className="text-[10px] text-orange-500 flex items-center gap-1 font-medium">
+                                <User className="h-3 w-3" />
+                                Sem responsável
+                              </p>
+                            )}
+
+                            {tarefa.tarefa_origem_titulo && (
+                              <p className="text-[10px] text-rose-500 flex items-center gap-1">
+                                <ArrowRight className="h-3 w-3" />
+                                De: {tarefa.tarefa_origem_titulo.replace('[Continuação] ', '')}
+                              </p>
+                            )}
+
+                            {Array.isArray(tarefa.tarefas_encaminhadas) && tarefa.tarefas_encaminhadas.length > 0 && (
+                              <p className="text-[10px] text-blue-500 flex items-center gap-1">
+                                <GitBranch className="h-3 w-3" />
+                                {tarefa.tarefas_encaminhadas.length} encaminhamento(s)
+                              </p>
+                            )}
+
                             <div className="flex flex-wrap gap-1">
                               <Badge className={`${prioridadeColors[tarefa.prioridade]} text-xs`}>
                                 {tarefa.prioridade}
                               </Badge>
-
-                              {diasRestantes !== null &&
-                                diasRestantes < 0 &&
-                                tarefa.status !== 'Concluída' && (
-                                  <Badge className="bg-red-100 text-xs text-red-700">
-                                    {Math.abs(diasRestantes)}d
-                                  </Badge>
-                                )}
-
+                              {diasRestantes !== null && diasRestantes < 0 && tarefa.status !== 'Concluída' && (
+                                <Badge className="bg-red-100 text-xs text-red-700">
+                                  {Math.abs(diasRestantes)}d
+                                </Badge>
+                              )}
                               {tarefa.anexos && tarefa.anexos.length > 0 && (
                                 <Badge variant="outline" className="text-xs">
                                   <Paperclip className="mr-1 h-3 w-3" />
@@ -613,13 +744,10 @@ export default function Tarefas() {
                               {tarefa.data_vencimento && (
                                 <span className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
-                                  {format(parseISO(tarefa.data_vencimento), 'dd/MM', {
-                                    locale: ptBR,
-                                  })}
+                                  {format(parseISO(tarefa.data_vencimento), 'dd/MM', { locale: ptBR })}
                                 </span>
                               )}
-
-                              {tarefa.responsavel_id && (
+                              {tarefa.responsavel_id && pessoas.find((p) => p.id === tarefa.responsavel_id) && (
                                 <span className="flex items-center gap-1 truncate">
                                   <User className="h-3 w-3" />
                                   {getPessoaNome(tarefa.responsavel_id).split(' ')[0]}
@@ -644,11 +772,63 @@ export default function Tarefas() {
           })}
         </div>
 
+        {/* Modal Encaminhar */}
+        <EncaminharTarefaModal
+          open={!!encaminharTarefa}
+          onClose={() => setEncaminharTarefa(null)}
+          tarefaOrigem={encaminharTarefa}
+          pessoas={pessoas}
+        />
+
         {/* Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingItem ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle>
+              <div className="flex items-start justify-between gap-3 pr-6">
+                <DialogTitle>{editingItem ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle>
+                {editingItem && (
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {(() => {
+                      const cli = getClienteInfo(editingItem);
+                      return cli?.id ? (
+                        <Link
+                          to={`/ClienteDetalhe?id=${cli.id}`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {cli.nome.split(' ')[0]}
+                        </Link>
+                      ) : null;
+                    })()}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-rose-600 border-rose-200 hover:bg-rose-50 text-xs h-7 px-2"
+                      onClick={() => {
+                        setIsDialogOpen(false);
+                        setEncaminharTarefa(editingItem);
+                      }}
+                    >
+                      <GitBranch className="mr-1 h-3 w-3" />
+                      Encaminhar
+                    </Button>
+                  </div>
+                )}
+              </div>
+              {editingItem?.tarefa_origem_titulo && (
+                <p className="mt-1 text-xs text-rose-500 flex items-center gap-1">
+                  <ArrowRight className="h-3 w-3" />
+                  Originada de: <span className="font-medium">{editingItem.tarefa_origem_titulo}</span>
+                </p>
+              )}
+              {Array.isArray(editingItem?.tarefas_encaminhadas) && editingItem.tarefas_encaminhadas.length > 0 && (
+                <p className="mt-0.5 text-xs text-blue-500 flex items-center gap-1">
+                  <GitBranch className="h-3 w-3" />
+                  {editingItem.tarefas_encaminhadas.length} tarefa(s) encaminhada(s) a partir desta
+                </p>
+              )}
             </DialogHeader>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -681,7 +861,6 @@ export default function Tarefas() {
                     onChange={(e) => setFormData({ ...formData, data_inicio: e.target.value })}
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label>
                     Data de Vencimento{' '}
@@ -692,9 +871,7 @@ export default function Tarefas() {
                   <Input
                     type="date"
                     value={formData.data_vencimento}
-                    onChange={(e) =>
-                      setFormData({ ...formData, data_vencimento: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, data_vencimento: e.target.value })}
                     disabled={!!editingItem}
                   />
                 </div>
@@ -702,35 +879,37 @@ export default function Tarefas() {
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Status</Label>
+                  <Label>Status da Tarefa</Label>
                   <Select
-                    value={formData.status}
-                    onValueChange={(value) => setFormData({ ...formData, status: value })}
+                    value={formData.status_detalhado || 'Pendente'}
+                    onValueChange={(value) => setFormData({
+                      ...formData,
+                      status_detalhado: value,
+                      status: value === 'Concluída'
+                        ? 'Concluída'
+                        : value === 'Não realizada / Impedimento'
+                        ? 'Não realizada / Impedimento'
+                        : 'Em aberto',
+                    })}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="Urgente">⚡ Urgente</SelectItem>
                       <SelectItem value="Pendente">Pendente</SelectItem>
                       <SelectItem value="Em andamento">Em andamento</SelectItem>
                       <SelectItem value="Atrasada">Atrasada</SelectItem>
                       <SelectItem value="Concluída">Concluída</SelectItem>
-                      <SelectItem value="Não realizada / Impedimento">
-                        Não realizada / Impedimento
-                      </SelectItem>
+                      <SelectItem value="Não realizada / Impedimento">Não realizada / Impedimento</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label>Prioridade</Label>
                   <Select
                     value={formData.prioridade}
                     onValueChange={(value) => setFormData({ ...formData, prioridade: value })}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Baixa">Baixa</SelectItem>
                       <SelectItem value="Média">Média</SelectItem>
@@ -740,14 +919,12 @@ export default function Tarefas() {
                 </div>
               </div>
 
-              {formData.status === 'Atrasada' && (
+              {(formData.status_detalhado === 'Atrasada' || formData.status === 'Atrasada') && (
                 <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3">
                   <Label className="font-bold text-red-700">Motivo do Atraso *</Label>
                   <Textarea
                     value={formData.motivo_atraso}
-                    onChange={(e) =>
-                      setFormData({ ...formData, motivo_atraso: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, motivo_atraso: e.target.value })}
                     placeholder="Explique o motivo do atraso da tarefa..."
                     rows={3}
                     className="border-red-200"
@@ -761,9 +938,7 @@ export default function Tarefas() {
                 <Label>Responsável pela Execução</Label>
                 <Select
                   value={formData.responsavel_id}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, responsavel_id: value })
-                  }
+                  onValueChange={(value) => setFormData({ ...formData, responsavel_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o responsável..." />
@@ -779,12 +954,42 @@ export default function Tarefas() {
               </div>
 
               <div className="space-y-2">
+                <Label>Cliente Vinculado</Label>
+                <Select
+                  value={formData.cliente_id}
+                  onValueChange={(value) => {
+                    const c = clientes.find((c) => c.id === value);
+                    setFormData({ ...formData, cliente_id: value, cliente_nome: c?.nome_completo || '' });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um cliente (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientes.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.cliente_id && (
+                  <Link
+                    to={`/ClienteDetalhe?id=${formData.cliente_id}`}
+                    target="_blank"
+                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline mt-1"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Abrir ficha do cliente
+                  </Link>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label>Atendimento Relacionado</Label>
                 <Select
                   value={formData.atendimento_id}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, atendimento_id: value })
-                  }
+                  onValueChange={(value) => setFormData({ ...formData, atendimento_id: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um atendimento (opcional)" />
@@ -821,7 +1026,6 @@ export default function Tarefas() {
                       </Button>
                     </label>
                   </div>
-
                   {formData.anexos && formData.anexos.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {formData.anexos.map((url, idx) => (
@@ -847,16 +1051,16 @@ export default function Tarefas() {
               <div className="space-y-2">
                 <Label>
                   Retorno Executivo{' '}
-                  {(formData.status === 'Concluída' ||
+                  {(formData.status_detalhado === 'Concluída' ||
+                    formData.status_detalhado === 'Não realizada / Impedimento' ||
+                    formData.status === 'Concluída' ||
                     formData.status === 'Não realizada / Impedimento') && (
                     <span className="text-red-600">*</span>
                   )}
                 </Label>
                 <Textarea
                   value={formData.retorno_executivo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, retorno_executivo: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, retorno_executivo: e.target.value })}
                   placeholder="Descreva os resultados, ações tomadas e próximos passos..."
                   rows={3}
                 />
@@ -877,10 +1081,14 @@ export default function Tarefas() {
 
               {editingItem && Array.isArray(editingItem.historico_autoria) && editingItem.historico_autoria.length > 0 && (
                 <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-1">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Histórico de Autoria</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Histórico de Autoria
+                  </p>
                   <div className="max-h-32 overflow-y-auto space-y-1">
                     {editingItem.historico_autoria.map((entry, i) => (
-                      <p key={i} className="text-xs text-muted-foreground border-l-2 border-border pl-2">{entry}</p>
+                      <p key={i} className="text-xs text-muted-foreground border-l-2 border-border pl-2">
+                        {entry}
+                      </p>
                     ))}
                   </div>
                 </div>

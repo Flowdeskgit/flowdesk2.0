@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Input } from '@/components/ui/input';
@@ -14,11 +14,11 @@ export default function DocumentosGeradosTab() {
 
   const { data: documentos = [], isLoading } = useQuery({
     queryKey: ['documentos-gerados'],
-    queryFn: () => base44.entities.DocumentoGerado.list('-created_date', 200),
+    queryFn: () => flowdesk.entities.DocumentoGerado.list('-created_date', 200),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.DocumentoGerado.delete(id),
+    mutationFn: (id) => flowdesk.entities.DocumentoGerado.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['documentos-gerados'] }),
   });
 

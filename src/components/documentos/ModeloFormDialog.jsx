@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,7 +87,7 @@ export default function ModeloFormDialog({ open, onClose, onSave, modelo, user }
     const tipoMap = { docx: 'docx', doc: 'doc', pdf: 'pdf', xlsx: 'xlsx', xls: 'xls', jpg: 'jpg', jpeg: 'jpeg', png: 'png' };
 
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    const { file_url } = await flowdesk.integrations.Core.UploadFile({ file });
     setForm((prev) => ({
       ...prev,
       arquivo_url: file_url,

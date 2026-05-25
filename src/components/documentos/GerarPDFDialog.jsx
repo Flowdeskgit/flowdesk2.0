@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +23,7 @@ export default function GerarPDFDialog({ open, onClose, modelo, user, onDocument
 
   const { data: clientes = [] } = useQuery({
     queryKey: ['clientes-list'],
-    queryFn: () => base44.entities.Cliente.list('nome', 200),
+    queryFn: () => flowdesk.entities.Cliente.list('nome', 200),
     enabled: open,
   });
 
@@ -67,7 +67,7 @@ export default function GerarPDFDialog({ open, onClose, modelo, user, onDocument
     doc.save(`${titulo}.pdf`);
 
     // Salvar registro
-    const docGerado = await base44.entities.DocumentoGerado.create({
+    const docGerado = await flowdesk.entities.DocumentoGerado.create({
       modelo_id: modelo.id,
       nome_modelo: modelo.nome,
       titulo,
@@ -82,7 +82,7 @@ export default function GerarPDFDialog({ open, onClose, modelo, user, onDocument
     const emailCliente = clienteSelecionado?.email;
     if (emailCliente) {
       try {
-        await base44.integrations.Core.SendEmail({
+        await flowdesk.integrations.Core.SendEmail({
           to: emailCliente,
           subject: `Documento: ${titulo}`,
           body: `Prezado(a) ${clienteSelecionado.nome},

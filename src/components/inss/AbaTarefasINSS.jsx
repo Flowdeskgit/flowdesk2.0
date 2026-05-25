@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Plus, ListTodo, Kanban, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 import { format, isBefore } from 'date-fns';
 
@@ -64,25 +63,25 @@ export default function AbaTarefasINSS({ processoId, centralId, user }) {
 
   const { data: tarefas = [] } = useQuery({
     queryKey: ['tarefas-inss', processoId],
-    queryFn: () => base44.entities.TarefaINSS.filter({ processo_id: processoId }),
+    queryFn: () => flowdesk.entities.TarefaINSS.filter({ processo_id: processoId }),
   });
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
       const payload = { ...data, processo_id: processoId, central_id: centralId, atualizado_por: user?.email || '' };
-      if (editing) return base44.entities.TarefaINSS.update(editing.id, payload);
-      return base44.entities.TarefaINSS.create({ ...payload, criado_por: user?.email || '' });
+      if (editing) return flowdesk.entities.TarefaINSS.update(editing.id, payload);
+      return flowdesk.entities.TarefaINSS.create({ ...payload, criado_por: user?.email || '' });
     },
     onSuccess: () => { qc.invalidateQueries(['tarefas-inss', processoId]); setOpen(false); setEditing(null); setForm(BLANK); },
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ id, status }) => base44.entities.TarefaINSS.update(id, { status_tarefa: status, atualizado_por: user?.email || '' }),
+    mutationFn: ({ id, status }) => flowdesk.entities.TarefaINSS.update(id, { status_tarefa: status, atualizado_por: user?.email || '' }),
     onSuccess: () => qc.invalidateQueries(['tarefas-inss', processoId]),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.TarefaINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.TarefaINSS.delete(id),
     onSuccess: () => qc.invalidateQueries(['tarefas-inss', processoId]),
   });
 

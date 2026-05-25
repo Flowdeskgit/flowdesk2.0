@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,20 +27,20 @@ export default function AbaDeferidos({ processoId, centralId, user }) {
 
   const { data: deferidos = [] } = useQuery({
     queryKey: ['deferidos-inss', processoId],
-    queryFn: () => base44.entities.DeferidoINSS.filter({ processo_id: processoId }),
+    queryFn: () => flowdesk.entities.DeferidoINSS.filter({ processo_id: processoId }),
   });
 
   const saveMutation = useMutation({
     mutationFn: (data) => {
       const payload = { ...data, processo_id: processoId, central_id: centralId, atualizado_por: user?.email || '' };
-      if (editing) return base44.entities.DeferidoINSS.update(editing.id, payload);
-      return base44.entities.DeferidoINSS.create({ ...payload, criado_por: user?.email || '' });
+      if (editing) return flowdesk.entities.DeferidoINSS.update(editing.id, payload);
+      return flowdesk.entities.DeferidoINSS.create({ ...payload, criado_por: user?.email || '' });
     },
     onSuccess: () => { qc.invalidateQueries(['deferidos-inss', processoId]); setOpen(false); setEditing(null); setForm(BLANK); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.DeferidoINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.DeferidoINSS.delete(id),
     onSuccess: () => qc.invalidateQueries(['deferidos-inss', processoId]),
   });
 

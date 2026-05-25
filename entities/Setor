@@ -1,0 +1,40 @@
+{
+  "name": "Setor",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do setor ou usu\u00e1rio"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "Setor",
+        "Usu\u00e1rio",
+        "Recep\u00e7\u00e3o",
+        "Administrativo",
+        "Jur\u00eddico",
+        "Financeiro",
+        "Gest\u00e3o"
+      ],
+      "default": "Setor"
+    },
+    "cargo": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "telefone": {
+      "type": "string"
+    },
+    "observacoes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "nome",
+    "tipo"
+  ]
+}

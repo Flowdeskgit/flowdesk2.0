@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Save, Plus } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 
 export default function TabelaMetas({ cicloId, metas = [] }) {
   const [metasLocal, setMetasLocal] = useState(metas);
@@ -12,7 +12,7 @@ export default function TabelaMetas({ cicloId, metas = [] }) {
   const queryClient = useQueryClient();
 
   const createMetaMutation = useMutation({
-    mutationFn: (data) => base44.entities.MetaCiclo12Semanas.create(data),
+    mutationFn: (data) => flowdesk.entities.MetaCiclo12Semanas.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['metas-ciclo', cicloId] });
       setEditandoLinhas({});
@@ -20,7 +20,7 @@ export default function TabelaMetas({ cicloId, metas = [] }) {
   });
 
   const updateMetaMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.MetaCiclo12Semanas.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.MetaCiclo12Semanas.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['metas-ciclo', cicloId] });
       setEditandoLinhas({});

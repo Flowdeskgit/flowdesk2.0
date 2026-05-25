@@ -5,10 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Phone, MessageCircle, Plus, User, Calendar, Clock } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { Phone, MessageCircle, Plus } from 'lucide-react';
 
 const STATUS_OPTS = ['Novo', 'Em Contato', 'Qualificado', 'Convertido', 'Perdido', 'Desqualificado'];
 const ORIGEM_OPTS = ['Instagram', 'Facebook', 'Google', 'Indicação', 'Site', 'WhatsApp', 'Campanha', 'Outro'];

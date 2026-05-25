@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { flowdesk } from '@/api/flowdeskClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Search, FileCheck, Edit, Trash2, CheckCircle2,
@@ -72,24 +72,24 @@ export default function AndamentoAdministrativo() {
 
   const { data: agendamentos = [] } = useQuery({
     queryKey: ['agendamentos-inss'],
-    queryFn: () => base44.entities.AgendamentoINSS.list('-created_date'),
+    queryFn: () => flowdesk.entities.AgendamentoINSS.list('-created_date'),
   });
 
   const { data: processos = [] } = useQuery({
     queryKey: ['processos-inss'],
-    queryFn: () => base44.entities.ProcessoAdministrativoINSS.list('-created_date'),
+    queryFn: () => flowdesk.entities.ProcessoAdministrativoINSS.list('-created_date'),
   });
 
   const { data: pessoas = [] } = useQuery({
     queryKey: ['pessoas'],
-    queryFn: () => base44.entities.Pessoa.list(),
+    queryFn: () => flowdesk.entities.Pessoa.list(),
   });
 
   const getPessoaNome = (id) => pessoas.find((p) => p.id === id)?.nome || '-';
 
   // ── Mutations Agendamento ──
   const createAgendMutation = useMutation({
-    mutationFn: (data) => base44.entities.AgendamentoINSS.create(data),
+    mutationFn: (data) => flowdesk.entities.AgendamentoINSS.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agendamentos-inss'] });
       closeAgendDialog();
@@ -97,7 +97,7 @@ export default function AndamentoAdministrativo() {
   });
 
   const updateAgendMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.AgendamentoINSS.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.AgendamentoINSS.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agendamentos-inss'] });
       closeAgendDialog();
@@ -105,18 +105,18 @@ export default function AndamentoAdministrativo() {
   });
 
   const deleteAgendMutation = useMutation({
-    mutationFn: (id) => base44.entities.AgendamentoINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.AgendamentoINSS.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agendamentos-inss'] }),
   });
 
   const concludeAgendMutation = useMutation({
-    mutationFn: (item) => base44.entities.AgendamentoINSS.update(item.id, { status: 'Concluído' }),
+    mutationFn: (item) => flowdesk.entities.AgendamentoINSS.update(item.id, { status: 'Concluído' }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['agendamentos-inss'] }),
   });
 
   // ── Mutations Processo ──
   const createProcMutation = useMutation({
-    mutationFn: (data) => base44.entities.ProcessoAdministrativoINSS.create(data),
+    mutationFn: (data) => flowdesk.entities.ProcessoAdministrativoINSS.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['processos-inss'] });
       closeProcDialog();
@@ -124,7 +124,7 @@ export default function AndamentoAdministrativo() {
   });
 
   const updateProcMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ProcessoAdministrativoINSS.update(id, data),
+    mutationFn: ({ id, data }) => flowdesk.entities.ProcessoAdministrativoINSS.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['processos-inss'] });
       closeProcDialog();
@@ -132,14 +132,14 @@ export default function AndamentoAdministrativo() {
   });
 
   const deleteProcMutation = useMutation({
-    mutationFn: (id) => base44.entities.ProcessoAdministrativoINSS.delete(id),
+    mutationFn: (id) => flowdesk.entities.ProcessoAdministrativoINSS.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['processos-inss'] }),
   });
 
   const concludeProcMutation = useMutation({
     mutationFn: async (item) => {
-      const user = await base44.auth.me();
-      return base44.entities.ProcessoAdministrativoINSS.update(item.id, {
+      const user = await flowdesk.auth.me();
+      return flowdesk.entities.ProcessoAdministrativoINSS.update(item.id, {
         status: 'Concluído',
         concluido_por: user?.full_name || user?.email || 'Usuário',
         data_conclusao: new Date().toISOString(),
